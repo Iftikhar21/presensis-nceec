@@ -40,7 +40,7 @@ $title_page = "NCEEC";
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard - <?= $title_page; ?></title>
+    <title>Data Absen Tutor - <?= $title_page; ?></title>
     <link rel="icon" href="../../../assets/img/nceec-logo.jpg" type="image/x-icon">
     <link rel="stylesheet" href="../../../assets/css/index.css">
     <link rel="stylesheet" href="../../../assets/css/app.css">
@@ -60,7 +60,7 @@ $title_page = "NCEEC";
 
         <nav class="mt-8">
             <div class="px-4 space-y-2">
-                <a href="../dashboard/dashboard.php" onclick="setActivePage('Dashboard')" class="menu-item active flex items-center px-4 py-3 text-sm rounded-lg" id="menu-dashboard">
+                <a href="../dashboard/dashboard.php" onclick="setActivePage('Dashboard')" class="menu-item flex items-center px-4 py-3 text-sm rounded-lg" id="menu-dashboard">
                     <i class="fa-solid fa-house text-lg mr-3"></i>
                     Dashboard
                 </a>
@@ -75,7 +75,7 @@ $title_page = "NCEEC";
                     List Pelajaran
                 </a>
 
-                <a href="../data-absent-tutor/absent-tutor.php" onclick="setActivePage('Data Absen Tutor')" class="menu-item flex items-center px-4 py-3 text-sm rounded-lg" id="menu-absen">
+                <a href="../data-absent-tutor/absent-tutor.php" onclick="setActivePage('Data Absen Tutor')" class="menu-item active flex items-center px-4 py-3 text-sm rounded-lg" id="menu-absen">
                     <i class="fa-solid fa-calendar text-lg mr-3"></i>
                     Data Absen Tutor
                 </a>
@@ -106,7 +106,7 @@ $title_page = "NCEEC";
                 <button onclick="toggleSidebar()" class="lg:hidden p-2 rounded-md btn-hover btn-focus">
                     <i class="fa-solid fa-bars"></i>
                 </button>
-                <h2 id="page-title" class="ml-4 lg:ml-0 text-xl font-semibold">Dashboard</h2>
+                <h2 id="page-title" class="ml-4 lg:ml-0 text-xl font-semibold">Data Absen Tutor</h2>
             </div>
 
             <div class="flex items-center space-x-4">
