@@ -1,7 +1,8 @@
 <?php
 require_once(__DIR__ . '/../../../config.php');
 
-function Register($data) {
+function Register($data)
+{
     $conn = connectDatabase();
     $username = $data['username'];
     $email = $data['email'];
@@ -19,6 +20,15 @@ function Register($data) {
         ];
     }
 
+    // Validate email format
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        return [
+            "status" => false,
+            "message" => "Format email tidak valid!",
+            "errorField" => "email"
+        ];
+    }
+
     if ($password !== $confirmPassword) {
         return [
             "status" => false,
@@ -27,10 +37,43 @@ function Register($data) {
         ];
     }
 
+    // Enhanced password validation
     if (strlen($password) < 8) {
         return [
             "status" => false,
             "message" => "Password harus minimal 8 karakter!",
+            "errorField" => "password"
+        ];
+    }
+
+    if (!preg_match('/[A-Z]/', $password)) {
+        return [
+            "status" => false,
+            "message" => "Password harus mengandung minimal 1 huruf besar!",
+            "errorField" => "password"
+        ];
+    }
+
+    if (!preg_match('/[a-z]/', $password)) {
+        return [
+            "status" => false,
+            "message" => "Password harus mengandung minimal 1 huruf kecil!",
+            "errorField" => "password"
+        ];
+    }
+
+    if (!preg_match('/[0-9]/', $password)) {
+        return [
+            "status" => false,
+            "message" => "Password harus mengandung minimal 1 angka!",
+            "errorField" => "password"
+        ];
+    }
+
+    if (!preg_match('/[!@#$%^&*(),.?":{}|<>-_]/', $password)) {
+        return [
+            "status" => false,
+            "message" => "Password harus mengandung minimal 1 simbol!",
             "errorField" => "password"
         ];
     }
@@ -48,11 +91,19 @@ function Register($data) {
         $stmt->execute();
         $stmt->store_result();
 
-        return [
-            "status" => false,
-            "message" => $stmt->num_rows > 0 ? "Username sudah terdaftar!" : "Email sudah terdaftar!",
-            "errorField" => $stmt->num_rows > 0 ? "username" : "email"
-        ];
+        if ($stmt->num_rows > 0) {
+            return [
+                "status" => false,
+                "message" => "Username sudah terdaftar!",
+                "errorField" => "username"
+            ];
+        } else {
+            return [
+                "status" => false,
+                "message" => "Email sudah terdaftar!",
+                "errorField" => "email"
+            ];
+        }
     }
 
     // Hash password
@@ -76,4 +127,3 @@ function Register($data) {
         ];
     }
 }
-?>
