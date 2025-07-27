@@ -86,322 +86,126 @@ if ($user === null) {
     <title>Reset Password - NCEEC</title>
     <link rel="stylesheet" href="../../assets/css/index.css">
     <link rel="stylesheet" href="../../assets/css/app.css">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        .password-toggle {
-            position: absolute;
-            right: 15px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: none;
-            border: none;
-            color: #6c757d;
-            cursor: pointer;
-            z-index: 10;
+        .password-toggle-icon {
+            display: none;
         }
 
-        .password-toggle:hover {
-            color: #495057;
-        }
-
-        .password-input-wrapper {
-            position: relative;
-        }
-
-        .password-input-wrapper input {
-            padding-right: 45px;
-        }
-
-        .password-requirements {
-            font-size: 0.8rem;
-            color: #6c757d;
-            margin-top: 5px;
-        }
-
-        .requirement {
-            display: flex;
-            align-items: center;
-            margin-bottom: 3px;
-        }
-
-        .requirement i {
-            margin-right: 5px;
-            font-size: 0.7rem;
-        }
-
-        .valid {
-            color: #28a745;
-        }
-
-        .invalid {
-            color: #dc3545;
-        }
-
-        .account-info {
-            background-color: #f8f9fa;
-            border-radius: 5px;
-            padding: 15px;
-            margin-bottom: 20px;
-        }
-
-        .reset-password-container {
-            max-width: 1000px;
-            margin: 0 auto;
-            background-color: white;
-            border-radius: 10px;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-        }
-
-        .form-section {
-            padding: 40px;
-        }
-
-        .image-section {
-            background-image: url('../../assets/img/nceec-logo.jpg');
-            background-size: cover;
-            background-position: center;
-            position: relative;
-        }
-
-        .image-section::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: rgba(0, 0, 0, 0.5);
-        }
-
-        .form-title {
-            font-weight: 700;
-            margin-bottom: 10px;
-            color: #333;
-        }
-
-        .btn-nceec {
-            background-color: #000;
-            color: white;
-            border: none;
-            padding: 10px 0;
-            font-weight: 600;
-        }
-
-        .btn-nceec:hover {
-            background-color: #333;
-            color: white;
+        .password-toggle-icon.active {
+            display: inline-block;
         }
     </style>
 </head>
 
-<body class="bg-light">
-    <div class="reset-password-container d-flex">
-        <div class="form-section col-md-7">
-            <h2 class="form-title">Reset Password</h2>
-            <p class="text-muted">Silahkan Masukkan Password yang Baru!</p>
-
-            <!-- Informasi Akun -->
-            <div class="mb-2">
-                <label for="username">Username</label>
-                <input type="text" class="form-control" name="username" value="<?php echo htmlspecialchars($user['username'] ?? 'N/A'); ?>" disabled />
+<body class="min-h-screen bg-gray-100 flex items-center justify-center p-4">
+    <div class="w-full max-w-md">
+        <!-- Container utama -->
+        <div class="bg-white rounded-lg shadow-lg p-8 border border-gray-200">
+            <!-- Header -->
+            <div class="text-center mb-8">
+                <div class="w-16 h-16 bg-black rounded-full flex items-center justify-center mx-auto mb-4 p-1">
+                    <img src="../../assets/img/nceec-logo.jpg" alt="Logo NCEEC" class="rounded-full">
+                </div>
+                <h2 class="text-2xl font-bold tracking-widest text-gray-900">RESET PASSWORD</h2>
             </div>
 
-            <div class="mb-3">
-                <label for="email">Email</label>
-                <input type="email" class="form-control" name="email" value="<?php echo htmlspecialchars($user['email'] ?? 'N/A'); ?>" disabled />
-            </div>
-
-            <form method="POST" id="resetForm">
+            <!-- Form -->
+            <form class="space-y-6" method="post">
                 <input type="hidden" name="token" value="<?php echo htmlspecialchars($token); ?>">
 
+                <!-- Username -->
+                <div>
+                    <label for="username" class="block text-sm font-medium text-gray-700 mb-2">
+                        Username
+                    </label>
+                    <input type="text" id="username" name="username" value="<?php echo htmlspecialchars($user['username'] ?? 'N/A'); ?>" disabled class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-all duration-200 text-gray-900 placeholder-gray-500">
+                </div>
+
+                <!-- Email -->
+                <div>
+                    <label for="email" class="block text-sm font-medium text-gray-700 mb-2">
+                        Email
+                    </label>
+                    <input type="email" id="email" name="email" value="<?php echo htmlspecialchars($user['email'] ?? 'N/A'); ?>" disabled class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-all duration-200 text-gray-900 placeholder-gray-500">
+                </div>
+
                 <!-- Password -->
-                <div class="mb-3">
-                    <label for="password">Password Baru</label>
-                    <div class="password-input-wrapper">
-                        <input type="password" class="form-control" id="password" name="password" placeholder="********" required />
-                        <button type="button" class="password-toggle" data-target="password">
-                            <i class="fa-solid fa-eye-slash"></i>
+                <div>
+                    <label for="password" class="block text-sm font-medium text-gray-700 mb-2">
+                        Password Baru
+                    </label>
+                    <div class="relative">
+                        <input type="password" id="password" name="password" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-all duration-200 text-gray-900 placeholder-gray-500 pr-12" placeholder="Masukkan Password Baru">
+                        <button type="button" onclick="togglePassword('password')" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors">
+                            <i class="fa-regular fa-eye password-toggle-icon" id="eye-open-password"></i>
+                            <i class="fa-regular fa-eye-slash password-toggle-icon active" id="eye-closed-password"></i>
                         </button>
-                    </div>
-                    <div class="password-requirements">
-                        <div class="row">
-                            <div class="col">
-                                <div class="requirement" id="length-req">
-                                    <i class="fas fa-circle"></i> Minimal 8 karakter
-                                </div>
-                                <div class="requirement" id="uppercase-req">
-                                    <i class="fas fa-circle"></i> Minimal 1 huruf besar
-                                </div>
-                                <div class="requirement" id="lowercase-req">
-                                    <i class="fas fa-circle"></i> Minimal 1 huruf kecil
-                                </div>
-                            </div>
-                            <div class="col">
-                                <div class="requirement" id="number-req">
-                                    <i class="fas fa-circle"></i> Minimal 1 angka
-                                </div>
-                                <div class="requirement" id="special-req">
-                                    <i class="fas fa-circle"></i> Minimal 1 simbol
-                                </div>
-                            </div>
-                        </div>
                     </div>
                 </div>
 
                 <!-- Confirm Password -->
-                <div class="mb-3">
-                    <label for="confirm_password">Konfirmasi Password</label>
-                    <div class="password-input-wrapper">
-                        <input type="password" class="form-control" id="confirm_password" name="confirm_password" placeholder="********" required />
-                        <button type="button" class="password-toggle" data-target="confirm_password">
-                            <i class="fa-solid fa-eye-slash"></i>
+                <div>
+                    <label for="confirm-password" class="block text-sm font-medium text-gray-700 mb-2">
+                        Konfirmasi Password
+                    </label>
+                    <div class="relative">
+                        <input type="password" id="confirm-password" name="confirm_password" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-all duration-200 text-gray-900 placeholder-gray-500 pr-12" placeholder="Masukkan Konfirmasi Password">
+                        <button type="button" onclick="togglePassword('confirm-password')" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors">
+                            <i class="fa-regular fa-eye password-toggle-icon" id="eye-open-confirm-password"></i>
+                            <i class="fa-regular fa-eye-slash password-toggle-icon active" id="eye-closed-confirm-password"></i>
                         </button>
                     </div>
-                    <div id="confirm-message" class="text-danger" style="font-size: 0.8rem;"></div>
                 </div>
 
-                <button type="submit" name="submit" class="btn btn-nceec w-100">Reset Password</button>
+                <!-- Submit Button -->
+                <button type="submit" name="submit" class="w-full bg-black text-white py-3 px-4 rounded-lg font-medium hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2 transition-all duration-200 transform hover:scale-[1.02]">
+                    Reset Password
+                </button>
             </form>
-        </div>
-        <div class="image-section col-md-5 d-none d-md-block"></div>
-    </div>
 
-    <!-- Modal Error -->
-    <div class="modal fade" id="errorModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content" role="alert">
-                <div class="modal-header bg-danger text-light">
-                    <h5 class="modal-title">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        Reset Password Gagal
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="modal-body text-center">
-                    <div class="error-icon-large">
-                        <i class="fas fa-times-circle"></i>
-                    </div>
-                    <div class="error-message">
-                        <strong><?= $_SESSION['error'] ?? '' ?></strong><br>
-                        Silakan coba lagi.
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">
-                        <i class="fas fa-redo me-2"></i>Coba Lagi
-                    </button>
-                </div>
+            <!-- Back to Login Link -->
+            <div class="text-center mt-8">
+                <p class="text-gray-600">
+                    Sudah ingat password?
+                    <a href="form-login.php" class="text-black font-medium hover:text-gray-700 transition-colors">
+                        Login sekarang
+                    </a>
+                </p>
             </div>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        document.querySelectorAll('.password-toggle').forEach(button => {
-            button.addEventListener('click', function() {
-                const targetId = this.getAttribute('data-target');
-                const input = document.getElementById(targetId);
-                const icon = this.querySelector('i');
+        function togglePassword(fieldId) {
+            const passwordInput = document.getElementById(fieldId);
+            const eyeOpen = document.getElementById(`eye-open-${fieldId}`);
+            const eyeClosed = document.getElementById(`eye-closed-${fieldId}`);
 
-                if (input.type === 'password') {
-                    input.type = 'text';
-                    icon.classList.remove('fa-eye-slash');
-                    icon.classList.add('fa-eye');
-                } else {
-                    input.type = 'password';
-                    icon.classList.remove('fa-eye');
-                    icon.classList.add('fa-eye-slash');
-                }
-            });
-        });
-
-        // Validasi password real-time
-        const passwordInput = document.getElementById('password');
-        const confirmPasswordInput = document.getElementById('confirm_password');
-        const confirmMessage = document.getElementById('confirm-message');
-
-        passwordInput.addEventListener('input', function() {
-            const password = this.value;
-
-            // Validasi panjang
-            if (password.length >= 8) {
-                document.getElementById('length-req').classList.add('valid');
-                document.getElementById('length-req').classList.remove('invalid');
-                document.getElementById('length-req').querySelector('i').className = 'fas fa-check-circle';
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                eyeOpen.classList.add('active');
+                eyeClosed.classList.remove('active');
             } else {
-                document.getElementById('length-req').classList.add('invalid');
-                document.getElementById('length-req').classList.remove('valid');
-                document.getElementById('length-req').querySelector('i').className = 'fas fa-times-circle';
+                passwordInput.type = 'password';
+                eyeOpen.classList.remove('active');
+                eyeClosed.classList.add('active');
             }
+        }
 
-            // Validasi huruf besar
-            if (/[A-Z]/.test(password)) {
-                document.getElementById('uppercase-req').classList.add('valid');
-                document.getElementById('uppercase-req').classList.remove('invalid');
-                document.getElementById('uppercase-req').querySelector('i').className = 'fas fa-check-circle';
-            } else {
-                document.getElementById('uppercase-req').classList.add('invalid');
-                document.getElementById('uppercase-req').classList.remove('valid');
-                document.getElementById('uppercase-req').querySelector('i').className = 'fas fa-times-circle';
-            }
+        // Animasi saat load
+        document.addEventListener('DOMContentLoaded', function () {
+            const container = document.querySelector('.bg-white');
+            container.style.opacity = '0';
+            container.style.transform = 'translateY(20px)';
 
-            // Validasi huruf kecil
-            if (/[a-z]/.test(password)) {
-                document.getElementById('lowercase-req').classList.add('valid');
-                document.getElementById('lowercase-req').classList.remove('invalid');
-                document.getElementById('lowercase-req').querySelector('i').className = 'fas fa-check-circle';
-            } else {
-                document.getElementById('lowercase-req').classList.add('invalid');
-                document.getElementById('lowercase-req').classList.remove('valid');
-                document.getElementById('lowercase-req').querySelector('i').className = 'fas fa-times-circle';
-            }
-
-            // Validasi angka
-            if (/[0-9]/.test(password)) {
-                document.getElementById('number-req').classList.add('valid');
-                document.getElementById('number-req').classList.remove('invalid');
-                document.getElementById('number-req').querySelector('i').className = 'fas fa-check-circle';
-            } else {
-                document.getElementById('number-req').classList.add('invalid');
-                document.getElementById('number-req').classList.remove('valid');
-                document.getElementById('number-req').querySelector('i').className = 'fas fa-times-circle';
-            }
-
-            // Validasi simbol
-            if (/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
-                document.getElementById('special-req').classList.add('valid');
-                document.getElementById('special-req').classList.remove('invalid');
-                document.getElementById('special-req').querySelector('i').className = 'fas fa-check-circle';
-            } else {
-                document.getElementById('special-req').classList.add('invalid');
-                document.getElementById('special-req').classList.remove('valid');
-                document.getElementById('special-req').querySelector('i').className = 'fas fa-times-circle';
-            }
-        });
-
-        // Validasi konfirmasi password
-        confirmPasswordInput.addEventListener('input', function() {
-            if (this.value !== passwordInput.value) {
-                confirmMessage.textContent = "Password tidak cocok!";
-            } else {
-                confirmMessage.textContent = "";
-            }
+            setTimeout(() => {
+                container.style.transition = 'all 0.6s ease';
+                container.style.opacity = '1';
+                container.style.transform = 'translateY(0)';
+            }, 100);
         });
     </script>
-
-    <?php
-    if (isset($_SESSION['error'])) {
-        echo "<script>
-                    const errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
-                    errorModal.show();
-                </script>";
-        unset($_SESSION['error']);
-    }
-    ?>
 </body>
 
 </html>
