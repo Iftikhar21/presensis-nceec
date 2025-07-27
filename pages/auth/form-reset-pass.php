@@ -2,6 +2,7 @@
 session_start();
 include '../../includes/crud/crud-auth/crud-reset-password.php';
 
+
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $token = $_POST['token'];
@@ -11,38 +12,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Validate passwords match
     if ($password !== $confirm_password) {
         $_SESSION['error'] = "Password dan konfirmasi password tidak cocok!";
-        header("Location: reset-pass.php?token=" . urlencode($token));
+        header("Location: form-reset-pass.php?token=" . urlencode($token));
         exit();
     }
 
     // Validasi kompleksitas password
     if (strlen($password) < 8) {
         $_SESSION['error'] = "Password minimal 8 karakter!";
-        header("Location: reset-pass.php?token=" . urlencode($token));
+        header("Location: form-reset-pass.php?token=" . urlencode($token));
         exit();
     }
 
     if (!preg_match('/[A-Z]/', $password)) {
         $_SESSION['error'] = "Password harus mengandung minimal 1 huruf besar!";
-        header("Location: reset-pass.php?token=" . urlencode($token));
+        header("Location: form-reset-pass.php?token=" . urlencode($token));
         exit();
     }
 
     if (!preg_match('/[a-z]/', $password)) {
         $_SESSION['error'] = "Password harus mengandung minimal 1 huruf kecil!";
-        header("Location: reset-pass.php?token=" . urlencode($token));
+        header("Location: form-reset-pass.php?token=" . urlencode($token));
         exit();
     }
 
     if (!preg_match('/[0-9]/', $password)) {
         $_SESSION['error'] = "Password harus mengandung minimal 1 angka!";
-        header("Location: reset-pass.php?token=" . urlencode($token));
+        header("Location: form-reset-pass.php?token=" . urlencode($token));
         exit();
     }
 
     if (!preg_match('/[!@#$%^&*()_+\-=\[\]{};\':"\\|,.<>\/?]/', $password)) {
         $_SESSION['error'] = "Password harus mengandung minimal 1 simbol!";
-        header("Location: reset-pass.php?token=" . urlencode($token));
+        header("Location: form-reset-pass.php?token=" . urlencode($token));
         exit();
     }
 
@@ -57,7 +58,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit();
     } else {
         $_SESSION['error'] = $result["message"];
-        header("Location: reset-pass.php?token=" . urlencode($token));
+        header("Location: form-reset-pass.php?token=" . urlencode($token));
         exit();
     }
 }

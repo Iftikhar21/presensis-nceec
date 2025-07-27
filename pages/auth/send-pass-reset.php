@@ -78,10 +78,10 @@ if ($user) {
                     <p>Kami menerima permintaan untuk mereset password akun Fashion 24 Anda. 
                     Silakan klik tombol di bawah ini untuk melanjutkan proses reset password:</p>
                     
-                    <p><a href='https://backend24.site/Rian/XI/recode/presence_nceec/pages/auth/form-reset-pass.php?token=$token' class='button'>Reset Password Saya</a></p>
+                    <p><a href='https://backend24.site/Rian/XI/recode/presence-nceec/pages/auth/form-reset-pass.php?token=$token' class='button'>Reset Password Saya</a></p>
                     
                     <p>Atau salin dan tempel link berikut ke browser Anda:<br>
-                    <small>https://backend24.site/Rian/XI/recode/presence_nceec/pages/auth/form-reset-pass.php?token=$token</small></p>
+                    <small>https://backend24.site/Rian/XI/recode/presence-nceec/pages/auth/form-reset-pass.php?token=$token</small></p>
                     
                     <p class='warning'>Link ini akan kadaluarsa dalam 30 menit. Jika Anda tidak meminta reset password, 
                     Anda dapat mengabaikan email ini dan password Anda tidak akan berubah.</p>
