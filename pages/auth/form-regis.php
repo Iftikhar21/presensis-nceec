@@ -20,7 +20,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Monokrom</title>
+    <title>Login - NCEEC</title>
     <link rel="stylesheet" href="../../assets/css/index.css">
     <link rel="stylesheet" href="../../assets/css/app.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -130,7 +130,7 @@
             <div class="text-center mt-8">
                 <p class="text-gray-600">
                     Sudah punya akun?
-                    <a href="#" class="text-black font-medium hover:text-gray-700 transition-colors">
+                    <a href="form-login.php" class="text-black font-medium hover:text-gray-700 transition-colors">
                         Login sekarang
                     </a>
                 </p>

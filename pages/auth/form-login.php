@@ -23,7 +23,7 @@ if (isset($_POST['submit'])) {
         'password' => $_POST['password'],
         'remember' => isset($_POST['remember'])
     ];
-    
+
     $result = Login($login_data);
 
     if ($result["status"]) {
@@ -54,9 +54,19 @@ if (isset($_POST['submit'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Monokrom</title>
+    <title>Login - NCEEC</title>
     <link rel="stylesheet" href="../../assets/css/index.css">
     <link rel="stylesheet" href="../../assets/css/app.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .password-toggle-icon {
+            display: none;
+        }
+
+        .password-toggle-icon.active {
+            display: inline-block;
+        }
+    </style>
 </head>
 
 <body class="min-h-screen bg-gray-100 flex items-center justify-center p-4">
@@ -103,15 +113,10 @@ if (isset($_POST['submit'])) {
                             placeholder="Masukkan password">
                         <button
                             type="button"
-                            onclick="togglePassword()"
+                            onclick="togglePassword('password')"
                             class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors">
-                            <svg id="eye-open" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                            </svg>
-                            <svg id="eye-closed" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21"></path>
-                            </svg>
+                            <i class="fa-regular fa-eye password-toggle-icon" id="eye-open-password"></i>
+                            <i class="fa-regular fa-eye-slash password-toggle-icon active" id="eye-closed-password"></i>
                         </button>
                     </div>
                 </div>
@@ -124,7 +129,7 @@ if (isset($_POST['submit'])) {
                             class="w-4 h-4 text-black bg-gray-100 border-gray-300 rounded focus:ring-black focus:ring-2">
                         <span class="ml-2 text-sm text-gray-600">Ingat saya</span>
                     </label>
-                    <a href="#" class="text-sm text-black hover:text-gray-700 font-medium transition-colors">
+                    <a href="forgot-pass.php" class="text-sm text-black hover:text-gray-700 font-medium transition-colors">
                         Lupa password?
                     </a>
                 </div>
@@ -150,19 +155,19 @@ if (isset($_POST['submit'])) {
     </div>
 
     <script>
-        function togglePassword() {
-            const passwordInput = document.getElementById('password');
-            const eyeOpen = document.getElementById('eye-open');
-            const eyeClosed = document.getElementById('eye-closed');
+        function togglePassword(fieldId) {
+            const passwordInput = document.getElementById(fieldId);
+            const eyeOpen = document.getElementById(`eye-open-${fieldId}`);
+            const eyeClosed = document.getElementById(`eye-closed-${fieldId}`);
 
             if (passwordInput.type === 'password') {
                 passwordInput.type = 'text';
-                eyeOpen.classList.add('hidden');
-                eyeClosed.classList.remove('hidden');
+                eyeOpen.classList.add('active');
+                eyeClosed.classList.remove('active');
             } else {
                 passwordInput.type = 'password';
-                eyeOpen.classList.remove('hidden');
-                eyeClosed.classList.add('hidden');
+                eyeOpen.classList.remove('active');
+                eyeClosed.classList.add('active');
             }
         }
 

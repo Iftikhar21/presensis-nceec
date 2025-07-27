@@ -8,6 +8,7 @@ function Register($data) {
     $password = $data['password'];
     $confirmPassword = $data['confirm-password'];
     $role = 'teacher'; // Default role sesuai kebutuhan
+    $createdAt = date("Y-m-d H:i:s");
 
     // Validasi input
     if (empty($username) || empty($email) || empty($password) || empty($confirmPassword)) {
@@ -58,8 +59,8 @@ function Register($data) {
     $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
 
     // Insert ke database
-    $stmt = $conn->prepare("INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)");
-    $stmt->bind_param("ssss", $username, $email, $hashedPassword, $role);
+    $stmt = $conn->prepare("INSERT INTO users (username, email, password, role, created_at) VALUES (?, ?, ?, ?, ?)");
+    $stmt->bind_param("sssss", $username, $email, $hashedPassword, $role, $createdAt);
 
     if ($stmt->execute()) {
         return [
