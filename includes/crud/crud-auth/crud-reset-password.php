@@ -43,7 +43,7 @@ function resetPassword($data) {
     $updatedAt = date("Y-m-d H:i:s");
     
     // Update password dan clear token
-    $sql = "UPDATE users SET password = ?, updated_at = ?, reset_token_hash = NULL, reset_token_expires_at = NULL WHERE id = ?";
+    $sql = "UPDATE users SET password = ?, update_at = ?, reset_token_hash = NULL, reset_token_expires_at = NULL WHERE id = ?";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("si", $hashedPassword, $updatedAt, $user['id']);
     
