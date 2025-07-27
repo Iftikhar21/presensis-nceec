@@ -111,14 +111,14 @@ if ($user) {
 
         try {
             $mail->send();
-            echo "<script>alert('Link reset password telah dikirim ke email Anda.'); window.location.href = '../Login/formLogin.php';</script>";
+            echo "<script>alert('Link reset password telah dikirim ke email Anda.'); window.location.href = 'form-login.php';</script>";
         } catch (Exception $e) {
             error_log("Gagal mengirim email: " . $e->getMessage());
             echo "<script>alert('Gagal mengirim email. Silakan coba lagi atau hubungi admin.'); window.location.href = 'forgot-pass.php';</script>";
         }
     } else {
-        echo "<script>alert('Gagal memproses permintaan reset password.'); window.location.href = '../Login/forgot-pass.php';</script>";
+        echo "<script>alert('Gagal memproses permintaan reset password.'); window.location.href = 'forgot-pass.php';</script>";
     }
 } else {
-    echo "<script>alert('Email tidak ditemukan.'); window.location.href = '../Login/forgot-pass.php';</script>";
+    echo "<script>alert('Email tidak ditemukan.'); window.location.href = 'forgot-pass.php';</script>";
 }
