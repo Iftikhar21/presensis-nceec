@@ -141,7 +141,7 @@ if (isset($_SESSION['username'])) {
                             type="checkbox"
                             name="remember"
                             class="w-4 h-4 text-black bg-gray-100 border-gray-300 rounded focus:ring-black focus:ring-2">
-                        <span class="ml-2 text-sm text-gray-600">Ingat saya</span>
+                        <span class="ml-2 text-sm text-gray-600">Ingat saya (30 Hari)</span>
                     </label>
                     <a href="forgot-pass.php" class="text-sm text-black hover:text-gray-700 font-medium transition-colors">
                         Lupa password?
