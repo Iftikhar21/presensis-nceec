@@ -2,51 +2,65 @@
 session_start();
 include '../../includes/crud/crud-auth/crud-login.php';
 
-$user_data = checkLoginCookie();
-if ($user_data) {
-    $_SESSION['username'] = $user_data['username'];
-    $_SESSION['email'] = $user_data['email'];
-    $_SESSION['ID'] = $user_data['id'];
-    $_SESSION['role'] = $user_data['role'];
+// Cek cookie remember me
+if (isset($_COOKIE['remember_me']) && !isset($_SESSION['username'])) {
+    $check = validateRememberMeCookie($_COOKIE['remember_me']);
+    if ($check['status']) {
+        $_SESSION['username'] = $check['user']['username'];
+        $_SESSION['email'] = $check['user']['email'];
+        $_SESSION['ID'] = $check['user']['id'];
+        $_SESSION['role'] = $check['user']['role'];
 
-    if ($user_data['role'] === 'admin') {
-        header("Location: ../admin/dashboard/dashboard.php");
-    } else if ($user_data['role'] === 'teacher') {
-        header("Location: ../teacher/dashboard/dashboard.php");
+        // Redirect sesuai role
+        if ($_SESSION['role'] === 'admin') {
+            header("Location: ../admin/dashboard/dashboard.php");
+        } else if ($_SESSION['role'] === 'teacher') {
+            header("Location: ../teacher/dashboard/dashboard.php");
+        }
+        exit;
     }
-    exit;
 }
 
+// Proses login saat form dikirim
 if (isset($_POST['submit'])) {
-    $login_data = [
-        'identifier' => $_POST['identifier'], // Menggunakan identifier bukan email
-        'password' => $_POST['password'],
-        'remember' => isset($_POST['remember'])
-    ];
+    $login = Login([
+        'username' => $_POST['identifier'],
+        'password' => $_POST['password']
+    ]);
 
-    $result = Login($login_data);
+    if ($login['status']) {
+        $_SESSION['username'] = $login['user']['username'];
+        $_SESSION['email'] = $login['user']['email'];
+        $_SESSION['ID'] = $login['user']['id'];
+        $_SESSION['role'] = $login['user']['role'];
 
-    if ($result["status"]) {
-        $_SESSION['username'] = $result["user"]['username'];
-        $_SESSION['email'] = $result["user"]['email'];
-        $_SESSION['ID'] = $result["user"]['id'];
-        $_SESSION['role'] = $result["user"]['role'];
+        if (isset($_POST['remember'])) {
+            createRememberMeCookie($login['user']['username'], $login['user']['id']);
+        }
 
-        if ($result["user"]['role'] === 'admin') {
+        if ($_SESSION['role'] === 'admin') {
             header("Location: ../admin/dashboard/dashboard.php");
-        } else if ($result["user"]['role'] === 'teacher') {
+        } else if ($_SESSION['role'] === 'teacher') {
             header("Location: ../teacher/dashboard/dashboard.php");
         }
         exit;
     } else {
-        $alert_message = $result["message"];
-        if (isset($result["timeout"])) {
-            $alert_message = $result["message"];
-        }
-        echo "<script>alert('{$alert_message}'); window.location='form-login.php';</script>";
+        echo "<script>alert('{$login['message']}'); window.location='form-login.php';</script>";
+        exit;
     }
 }
+
+// Jika sudah login, langsung redirect
+if (isset($_SESSION['username'])) {
+    if ($_SESSION['role'] === 'admin') {
+        header("Location: ../admin/dashboard/dashboard.php");
+    } else if ($_SESSION['role'] === 'teacher') {
+        header("Location: ../teacher/dashboard/dashboard.php");
+    }
+    exit;
+}
 ?>
+
 
 <!DOCTYPE html>
 <html lang="id">
@@ -84,7 +98,6 @@ if (isset($_POST['submit'])) {
             <!-- Form -->
             <form class="space-y-6" method="post" action="">
                 <!-- Email/Username -->
-                <!-- Ubah label dan placeholder -->
                 <div>
                     <label for="identifier" class="block text-sm font-medium text-gray-700 mb-2">
                         Email atau Username
@@ -126,6 +139,7 @@ if (isset($_POST['submit'])) {
                     <label class="flex items-center">
                         <input
                             type="checkbox"
+                            name="remember"
                             class="w-4 h-4 text-black bg-gray-100 border-gray-300 rounded focus:ring-black focus:ring-2">
                         <span class="ml-2 text-sm text-gray-600">Ingat saya</span>
                     </label>
