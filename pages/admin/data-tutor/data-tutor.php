@@ -5,6 +5,7 @@ ini_set('session.cookie_lifetime', 0); // session hilang saat browser ditutup
 session_start();
 include '../../../includes/crud/crud-auth/crud-login.php';
 include '../../../includes/crud/crud-admin/crud-admin.php';
+include '../../../includes/crud/crud-teacher/crud-teacher.php';
 
 
 // Pengecekan session utama
@@ -31,6 +32,10 @@ $email = $data_admin['admin']['email'];
 $role = ucfirst($data_admin['admin']['role']);
 
 $title_page = "NCEEC";
+
+$teachers = getAllTeachers();
+$totalTeachers = getAllCountTeachers();
+$countTutor = getAllCountTeachers();
 ?>
 
 
@@ -135,92 +140,184 @@ $title_page = "NCEEC";
 
         <!-- Content Area -->
         <main class="p-6 flex-grow">
-            <div class="max-w-7xl mx-auto">
-                <div class="content-card rounded-lg p-6 bg-white shadow-md mb-4 overflow-hidden relative animate-fade-in-down">
-                    <div class="absolute -right-10 -bottom-10 w-32 h-32 rounded-full bg-blue-100 opacity-50"></div>
-                    <div class="flex items-center justify-between relative z-5">
+            <div class="content-card rounded-lg p-6 bg-white shadow-md mb-4 overflow-hidden relative animate-fade-in-down">
+                <div class="absolute -right-10 -bottom-10 w-32 h-32 rounded-full bg-blue-100 opacity-50"></div>
+                <div class="flex items-center justify-between relative z-5">
+                    <div>
+                        <h3 class="text-xl md:text-2xl font-semibold mb-1">Lihat Data Tutor</h3>
+                        <p class="text-xs md:text-sm text-muted">Lihat Tutor yang Terdaftar</p>
+                    </div>
+                    <div class="text-right">
+                        <h3 class="text-xl md:text-3xl font-bold text-blue-600 mb-1"><?= $countTutor; ?></h3>
+                        <p class="text-xs md:text-sm text-muted">Tutor yang Terdaftar</p>
+                    </div>
+                </div>
+            </div>
+            <div class="content-card rounded-lg p-6 bg-white shadow-md mb-4 overflow-hidden relative animate-fade-in-down">
+                <!-- Header -->
+                <div class="border-b border-gray-200 pb-4 mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800">Data Tutor</h2>
+                </div>
+
+                <!-- Filter Section -->
+                <div class="p-6 mb-6 border border-gray-200 rounded-lg bg-gray-50">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <!-- Filter Nama -->
                         <div>
-                            <h3 class="text-xl md:text-2xl font-semibold mb-1">Selamat Datang, <?= $username ?>!</h3>
-                            <p class="text-xs md:text-sm text-muted">Semoga harimu menyenangkan</p>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Nama Tutor</label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <svg class="h-5 w-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"></path>
+                                    </svg>
+                                </div>
+                                <input
+                                    type="text"
+                                    id="filterNama"
+                                    placeholder="Cari nama tutor..."
+                                    class="pl-10 w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-150">
+                            </div>
                         </div>
-                        <div class="text-right">
-                            <div id="current-time" class="text-2xl md:text-3xl font-bold text-blue-600"></div>
-                            <div id="current-date" class="text-xs md:text-sm text-gray-500"></div>
+
+                        <!-- Filter Mata Pelajaran -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Mata Pelajaran</label>
+                            <select
+                                id="filterMapel"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-150">
+                                <option value="">Semua Mata Pelajaran</option>
+                                <option value="Matematika">Matematika</option>
+                                <option value="Fisika">Fisika</option>
+                                <option value="Kimia">Kimia</option>
+                                <option value="Biologi">Biologi</option>
+                                <option value="Bahasa Indonesia">Bahasa Indonesia</option>
+                                <option value="Bahasa Inggris">Bahasa Inggris</option>
+                            </select>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="flex items-end space-x-3">
+                            <button
+                                onclick="resetFilters()"
+                                class="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-150 flex items-center justify-center">
+                                <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                </svg>
+                                Reset
+                            </button>
+                            <button
+                                onclick="applyFilters()"
+                                class="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-150 flex items-center justify-center">
+                                <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                                </svg>
+                                Terapkan
+                            </button>
                         </div>
                     </div>
                 </div>
-                <script>
-                    function updateDateTime() {
-                        const now = new Date();
-                        const options = {
-                            weekday: 'long',
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric'
-                        };
 
-                        document.getElementById('current-time').textContent = now.toLocaleTimeString('id-ID', {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            second: '2-digit'
-                        });
-                        document.getElementById('current-date').textContent = now.toLocaleDateString('id-ID', options);
-                    }
-
-                    // Update setiap detik
-                    updateDateTime();
-                    setInterval(updateDateTime, 1000);
-                </script>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-5">
-                    <div class="content-card rounded-lg p-6 bg-white shadow-md animate-fade-in-up animate-delay-100 hover:shadow-lg transition-shadow duration-300">
-                        <div class="flex items-center">
-                            <div class="w-16 h-16 rounded-full flex items-center justify-center bg-blue-200 mr-3">
-                                <i class="fa-solid fa-users text-2xl text-blue-600"></i>
-                            </div>
-                            <div class="ml-4">
-                                <h3 class="text-base font-semibold mb-2">Jumlah Tutor</h3>
-                                <h3 class="text-5xl font-semibold mb-2 text-blue-600">36</h3>
-                                <p class="text-muted">Terdaftar</p>
-                            </div>
-                        </div>
+                <!-- Table Container -->
+                <div class="border border-gray-200 rounded-lg overflow-hidden">
+                    <!-- Table -->
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-100">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider w-10">
+                                        <input type="checkbox" id="selectAll" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-4 w-4">
+                                    </th>
+                                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">ID Tutor</th>
+                                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">User ID</th>
+                                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">Nama Tutor</th>
+                                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">Mata Pelajaran</th>
+                                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">Bergabung</th>
+                                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">Foto Profil</th>
+                                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tableBody" class="bg-white divide-y divide-gray-200">
+                                <?php foreach ($teachers as $teacher): ?>
+                                    <tr class="hover:bg-gray-50 transition duration-150 text-center">
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <input type="checkbox" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-4 w-4">
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 text-center">
+                                            <?= htmlspecialchars($teacher['id_tutor'] ?? 'N/A') ?>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 text-center">
+                                            <?= htmlspecialchars($teacher['user_id'] ?? 'N/A') ?>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 text-center">
+                                            <?= htmlspecialchars($teacher['nama_tutor'] ?? 'N/A') ?>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 text-center">
+                                                <?= htmlspecialchars($teacher['pelajaran'] ?? 'N/A') ?>
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                                            <?= htmlspecialchars($teacher['bergabung'] ?? 'N/A') ?>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="flex justify-center space-x-3">
+                                                <?php if (!empty($teacher['foto_profil'])): ?>
+                                                    <img src="<?= htmlspecialchars($teacher['foto_profil']) ?>" alt="Foto Profil" class="h-10 w-10 rounded-full object-cover border-2 border-gray-200">
+                                                <?php else: ?>
+                                                    <div class="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
+                                                        <span class="text-gray-400 text-xs">No Photo</span>
+                                                    </div>
+                                                <?php endif; ?>
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
+                                            <div class="flex justify-center space-x-3">
+                                                <button onclick="editTutor(<?= $teacher['id_tutor'] ?>)" class="text-blue-600 hover:text-blue-900 transition duration-150" title="Edit">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button onclick="deleteTutor(<?= $teacher['id_tutor'] ?>)" class="text-red-600 hover:text-red-900 transition duration-150" title="Hapus">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
                     </div>
 
-                    <div class="content-card rounded-lg p-6 bg-white shadow-md animate-fade-in-up animate-delay-200 hover:shadow-lg transition-shadow duration-300">
-                        <div class="flex items-center">
-                            <div class="w-16 h-16 rounded-full flex items-center justify-center bg-green-200 mr-3">
-                                <i class="fa-solid fa-list-check text-2xl text-green-600"></i>
-                            </div>
-                            <div class="ml-4">
-                                <h3 class="text-base font-semibold mb-2">List Materi</h3>
-                                <h3 class="text-5xl font-semibold mb-2 text-green-600">36</h3>
-                                <p class="text-muted">Tersedia</p>
-                            </div>
+                    <!-- Pagination -->
+                    <div class="px-6 py-4 flex items-center justify-between border-t border-gray-200 bg-gray-50">
+                        <div class="flex-1 flex justify-between sm:hidden">
+                            <button class="prev-page-mobile relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                Previous
+                            </button>
+                            <button class="next-page-mobile ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                Next
+                            </button>
                         </div>
-                    </div>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="content-card rounded-lg p-6 bg-white shadow-md animate-fade-in-up animate-delay-300 hover:shadow-lg transition-shadow duration-300">
-                        <div class="flex items-center">
-                            <div class="w-16 h-16 rounded-full flex items-center justify-center bg-yellow-200 mr-3">
-                                <i class="fa-solid fa-calendar text-2xl text-yellow-600"></i>
+                        <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                            <div>
+                                <p class="pagination-info text-sm text-gray-700">
+                                    <!-- Akan diisi oleh JavaScript -->
+                                </p>
                             </div>
-                            <div class="ml-4">
-                                <h3 class="text-base font-semibold mb-2">Jumlah Kelas</h3>
-                                <h3 class="text-5xl font-semibold mb-2 text-yellow-600">36</h3>
-                                <p class="text-muted">Tersedia</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="content-card rounded-lg p-6 bg-white shadow-md animate-fade-in-up animate-delay-400 hover:shadow-lg transition-shadow duration-300">
-                        <div class="flex items-center">
-                            <div class="w-16 h-16 rounded-full flex items-center justify-center bg-purple-200 mr-3">
-                                <i class="fa-solid fa-book-open-reader text-2xl text-purple-600"></i>
-                            </div>
-                            <div class="ml-4">
-                                <h3 class="text-base font-semibold mb-2">Jumlah Pelajaran</h3>
-                                <h3 class="text-5xl font-semibold mb-2 text-purple-600">36</h3>
-                                <p class="text-muted">Tersedia</p>
+                            <div>
+                                <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+                                    <button class="prev-page relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                        <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                                        </svg>
+                                    </button>
+                                    <div class="page-buttons flex">
+                                        <!-- Tombol halaman akan diisi oleh JavaScript -->
+                                    </div>
+                                    <button class="next-page relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                        <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+                                        </svg>
+                                    </button>
+                                </nav>
                             </div>
                         </div>
                     </div>
@@ -228,145 +325,6 @@ $title_page = "NCEEC";
             </div>
         </main>
     </div>
-
-    <script>
-        let currentPage = 'Dashboard';
-
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('overlay');
-
-            if (sidebar.classList.contains('-translate-x-full')) {
-                sidebar.classList.remove('-translate-x-full');
-                overlay.classList.remove('hidden');
-            } else {
-                sidebar.classList.add('-translate-x-full');
-                overlay.classList.add('hidden');
-            }
-        }
-
-        function setActivePage(pageName) {
-            // Update current page
-            currentPage = pageName;
-
-            // Update page title
-            document.getElementById('page-title').textContent = pageName;
-
-            // Update content
-            const contentTitle = document.getElementById('content-title');
-            const contentDescription = document.getElementById('content-description');
-
-            contentTitle.textContent = `Ini halaman ${pageName}`;
-
-            // Set description based on page
-            const descriptions = {
-                'Dashboard': 'Selamat datang di panel administrasi. Pilih menu di sidebar untuk navigasi ke halaman yang diinginkan.',
-                'List Materi': 'Halaman untuk mengelola daftar materi pembelajaran. Anda dapat menambah, mengedit, atau menghapus materi di sini.',
-                'Data Absen Tutor': 'Halaman untuk melihat dan mengelola data absensi tutor. Monitor kehadiran dan rekap absensi tutor.',
-                'Data Tutor': 'Halaman untuk mengelola data tutor. Kelola informasi profil, jadwal, dan data tutor lainnya.'
-            };
-
-            contentDescription.textContent = descriptions[pageName] || `Konten untuk halaman ${pageName}`;
-
-            // Update active menu
-            const menuItems = document.querySelectorAll('.menu-item');
-            menuItems.forEach(item => item.classList.remove('active'));
-
-            const menuMap = {
-                'Dashboard': 'menu-dashboard',
-                'List Materi': 'menu-materi',
-                'Data Absen Tutor': 'menu-absen',
-                'Data Tutor': 'menu-tutor'
-            };
-
-            if (menuMap[pageName]) {
-                document.getElementById(menuMap[pageName]).classList.add('active');
-            }
-
-            // Close sidebar on mobile after selection
-            if (window.innerWidth < 1024) {
-                toggleSidebar();
-            }
-        }
-
-        function logout() {
-            const modal = document.createElement('div');
-            modal.id = 'logout-modal';
-            modal.innerHTML = `
-                <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div class="bg-white rounded-lg p-6 w-96">
-                        <h2 class="text-lg font-semibold mb-4">Konfirmasi Logout</h2>
-                        <p class="text-sm mb-6">Apakah Anda yakin ingin logout?</p>
-                        <div class="flex justify-end space-x-4">
-                            <button id="close-modal" class="px-4 py-2 bg-gray-300 rounded">Batal</button>
-                            <button id="confirm-logout" class="px-4 py-2 bg-red-500 text-white rounded">Logout</button>
-                        </div>
-                    </div>
-                </div>
-            `;
-            document.body.appendChild(modal);
-
-            document.getElementById('close-modal').addEventListener('click', () => {
-                modal.remove();
-            });
-
-            document.getElementById('confirm-logout').addEventListener('click', () => {
-                window.location.href = '../../auth/logout.php';
-            });
-        }
-
-        // Close sidebar when clicking outside on mobile
-        document.addEventListener('click', function(event) {
-            const sidebar = document.getElementById('sidebar');
-            const hamburger = event.target.closest('button[onclick="toggleSidebar()"]');
-
-            if (!sidebar.contains(event.target) && !hamburger && window.innerWidth < 1024) {
-                if (!sidebar.classList.contains('-translate-x-full')) {
-                    toggleSidebar();
-                }
-            }
-        });
-
-        // Handle window resize
-        window.addEventListener('resize', function() {
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('overlay');
-
-            if (window.innerWidth >= 1024) {
-                sidebar.classList.remove('-translate-x-full');
-                overlay.classList.add('hidden');
-            } else {
-                sidebar.classList.add('-translate-x-full');
-                overlay.classList.add('hidden');
-            }
-        });
-
-        const userMenuButton = document.getElementById('user-menu-button');
-        const userMenu = document.getElementById('user-menu');
-        const userMenuIcon = document.getElementById('user-menu-icon');
-
-        userMenuButton.addEventListener('click', () => {
-            // Toggle rotasi antara 0 dan 180 derajat dengan transition
-            const currentRotation = userMenu.classList.contains('hidden') ? 180 : 0;
-            userMenuIcon.style.transform = `rotate(${currentRotation}deg)`;
-            userMenuIcon.style.transition = 'transform 0.3s ease';
-            userMenu.classList.toggle('hidden');
-        });
-
-        document.addEventListener('click', (event) => {
-            if (!userMenuButton.contains(event.target) && !userMenu.contains(event.target)) {
-                // Kembalikan rotasi ke 0 derajat saat menutup menu dengan transition
-                userMenuIcon.style.transform = 'rotate(0deg)';
-                userMenu.classList.add('hidden');
-            }
-        });
-    </script>
-    <style>
-
-    </style>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindplus/elements@1" type="module"></script>
-
     <!-- Footer -->
     <footer class="bg-white shadow-md lg:ml-64 mt-auto bottom-0">
         <div class="max-w-7xl mx-auto py-4 px-6">
@@ -375,6 +333,180 @@ $title_page = "NCEEC";
             </div>
         </div>
     </footer>
+
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindplus/elements@1" type="module"></script>
+    <script src="../../../assets/js/sidebar.js"></script>
+
+    <script>
+        // Data dan konfigurasi awal
+        const allTeachers = <?php echo json_encode($teachers); ?>;
+        let filteredTeachers = [...allTeachers];
+        let currentPage = 1;
+        const rowsPerPage = 10;
+
+        // Fungsi untuk memfilter data
+        function applyFilters() {
+            const namaFilter = document.getElementById('filterNama').value.toLowerCase();
+            const mapelFilter = document.getElementById('filterMapel').value;
+
+            filteredTeachers = allTeachers.filter(teacher => {
+                const namaMatch = teacher.nama_tutor?.toLowerCase().includes(namaFilter) || false;
+                const mapelMatch = mapelFilter === '' || teacher.pelajaran === mapelFilter;
+                return namaMatch && mapelMatch;
+            });
+
+            currentPage = 1;
+            renderTable();
+            updatePaginationInfo();
+        }
+
+        // Fungsi untuk mereset filter
+        function resetFilters() {
+            document.getElementById('filterNama').value = '';
+            document.getElementById('filterMapel').value = '';
+            filteredTeachers = [...allTeachers];
+            currentPage = 1;
+            renderTable();
+            updatePaginationInfo();
+        }
+
+        // Fungsi untuk merender tabel
+        function renderTable() {
+            const tableBody = document.getElementById('tableBody');
+            const startIndex = (currentPage - 1) * rowsPerPage;
+            const endIndex = startIndex + rowsPerPage;
+            const paginatedTeachers = filteredTeachers.slice(startIndex, endIndex);
+
+            tableBody.innerHTML = paginatedTeachers.map(teacher => `
+            <tr class="hover:bg-gray-50 transition duration-150 text-center">
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <input type="checkbox" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-4 w-4">
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 text-center">
+                    ${teacher.id_tutor || 'N/A'}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 text-center">
+                    ${teacher.user_id || 'N/A'}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 text-center">
+                    ${teacher.nama_tutor || 'N/A'}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 text-center">
+                        ${teacher.pelajaran || 'N/A'}
+                    </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                    ${teacher.bergabung || 'N/A'}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="flex justify-center space-x-3">
+                        ${teacher.foto_profil ? 
+                            `<img src="${teacher.foto_profil}" alt="Foto Profil" class="h-10 w-10 rounded-full object-cover border-2 border-gray-200">` : 
+                            `<div class="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
+                                <span class="text-gray-400 text-xs">No Photo</span>
+                            </div>`
+                        }
+                    </div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
+                    <div class="flex justify-center space-x-3">
+                        <button onclick="editTutor(${teacher.id_tutor})" class="text-blue-600 hover:text-blue-900 transition duration-150" title="Edit">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button onclick="deleteTutor(${teacher.id_tutor})" class="text-red-600 hover:text-red-900 transition duration-150" title="Hapus">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+        }
+
+        // Fungsi untuk update info pagination
+        function updatePaginationInfo() {
+            const totalPages = Math.ceil(filteredTeachers.length / rowsPerPage);
+            const startItem = (currentPage - 1) * rowsPerPage + 1;
+            const endItem = Math.min(currentPage * rowsPerPage, filteredTeachers.length);
+
+            document.querySelector('.pagination-info').textContent =
+                `Menampilkan ${startItem}-${endItem} dari ${filteredTeachers.length} hasil`;
+
+            // Update tombol navigasi
+            document.querySelector('.prev-page').disabled = currentPage === 1;
+            document.querySelector('.prev-page-mobile').disabled = currentPage === 1;
+            document.querySelector('.next-page').disabled = currentPage === totalPages;
+            document.querySelector('.next-page-mobile').disabled = currentPage === totalPages;
+
+            // Update tombol halaman
+            const pageButtonsContainer = document.querySelector('.page-buttons');
+            pageButtonsContainer.innerHTML = '';
+
+            for (let i = 1; i <= totalPages; i++) {
+                const button = document.createElement('button');
+                button.className = `relative inline-flex items-center px-4 py-2 border ${currentPage === i ? 'bg-blue-50 border-blue-500 text-blue-600' : 'border-gray-300 bg-white text-gray-500 hover:bg-gray-50'} text-sm font-medium`;
+                button.textContent = i;
+                button.addEventListener('click', () => changePage(i));
+                pageButtonsContainer.appendChild(button);
+            }
+        }
+
+        // Fungsi untuk navigasi halaman
+        function changePage(newPage) {
+            currentPage = newPage;
+            renderTable();
+            updatePaginationInfo();
+        }
+
+        // Fungsi edit tutor
+        function editTutor(id) {
+            console.log('Edit tutor dengan ID:', id);
+            // window.location.href = `edit-tutor.php?id=${id}`;
+        }
+
+        // Fungsi delete tutor
+        function deleteTutor(id) {
+            if (confirm('Apakah Anda yakin ingin menghapus tutor ini?')) {
+                console.log('Hapus tutor dengan ID:', id);
+                // Lakukan AJAX request atau form submission untuk menghapus data
+            }
+        }
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            renderTable();
+            updatePaginationInfo();
+
+            // Filter buttons
+            document.querySelector('button[onclick="applyFilters()"]').addEventListener('click', applyFilters);
+            document.querySelector('button[onclick="resetFilters()"]').addEventListener('click', resetFilters);
+
+            // Pagination controls
+            document.querySelector('.prev-page').addEventListener('click', () => {
+                if (currentPage > 1) changePage(currentPage - 1);
+            });
+
+            document.querySelector('.next-page').addEventListener('click', () => {
+                if (currentPage < Math.ceil(filteredTeachers.length / rowsPerPage)) changePage(currentPage + 1);
+            });
+
+            document.querySelector('.prev-page-mobile').addEventListener('click', () => {
+                if (currentPage > 1) changePage(currentPage - 1);
+            });
+
+            document.querySelector('.next-page-mobile').addEventListener('click', () => {
+                if (currentPage < Math.ceil(filteredTeachers.length / rowsPerPage)) changePage(currentPage + 1);
+            });
+
+            // Select all checkbox
+            document.getElementById('selectAll').addEventListener('change', function() {
+                document.querySelectorAll('#tableBody input[type="checkbox"]')
+                    .forEach(checkbox => checkbox.checked = this.checked);
+            });
+        });
+    </script>
 </body>
 
 </html>
