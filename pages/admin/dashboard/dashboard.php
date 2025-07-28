@@ -184,7 +184,7 @@ $countAbsentToday = getAllCountAbsentToday();
                     setInterval(updateDateTime, 1000);
                 </script>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-5">
-                    <div class="content-card rounded-lg p-6 bg-white shadow-md animate-fade-in-up animate-delay-100 hover:shadow-lg transition-shadow duration-300">
+                    <div class="content-card rounded-lg p-6 bg-white shadow-md animate-fade-in-up animate-delay-100 hover:shadow-lg cursor-pointer transition-shadow duration-300">
                         <div class="flex items-center">
                             <div class="w-16 h-16 rounded-full flex items-center justify-center bg-blue-200 mr-3">
                                 <i class="fa-solid fa-users text-2xl text-blue-600"></i>
@@ -197,7 +197,7 @@ $countAbsentToday = getAllCountAbsentToday();
                         </div>
                     </div>
 
-                    <div class="content-card rounded-lg p-6 bg-white shadow-md animate-fade-in-up animate-delay-300 hover:shadow-lg transition-shadow duration-300">
+                    <div class="content-card rounded-lg p-6 bg-white shadow-md animate-fade-in-up animate-delay-300 hover:shadow-lg cursor-pointer  transition-shadow duration-300">
                         <div class="flex items-center">
                             <div class="w-16 h-16 rounded-full flex items-center justify-center bg-yellow-200 mr-3">
                                 <i class="fa-solid fa-check text-2xl text-yellow-600"></i>
@@ -211,7 +211,7 @@ $countAbsentToday = getAllCountAbsentToday();
                     </div>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="content-card rounded-lg p-6 bg-white shadow-md animate-fade-in-up animate-delay-200 hover:shadow-lg transition-shadow duration-300">
+                    <div class="content-card rounded-lg p-6 bg-white shadow-md animate-fade-in-up animate-delay-200 hover:shadow-lg cursor-pointer transition-shadow duration-300">
                         <div class="flex items-center">
                             <div class="w-16 h-16 rounded-full flex items-center justify-center bg-green-200 mr-3">
                                 <i class="fa-solid fa-list-check text-2xl text-green-600"></i>
@@ -224,7 +224,7 @@ $countAbsentToday = getAllCountAbsentToday();
                         </div>
                     </div>
 
-                    <div class="content-card rounded-lg p-6 bg-white shadow-md animate-fade-in-up animate-delay-400 hover:shadow-lg transition-shadow duration-300">
+                    <div class="content-card rounded-lg p-6 bg-white shadow-md animate-fade-in-up animate-delay-400 hover:shadow-lg cursor-pointer transition-shadow duration-300">
                         <div class="flex items-center">
                             <div class="w-16 h-16 rounded-full flex items-center justify-center bg-purple-200 mr-3">
                                 <i class="fa-solid fa-book-open-reader text-2xl text-purple-600"></i>
