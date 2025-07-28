@@ -125,7 +125,7 @@ $title_page = "NCEEC";
                             <hr class="border-gray-200">
                             <a href="#" onclick="logout()" class="block px-6 py-4 text-sm text-gray-700 hover:bg-gray-100">
                                 <i class="fa-solid fa-right-from-bracket text-lg mr-3 text-red-700"></i>
-                                Logout
+                                Logouttt
                             </a>
                         </div>
                     </div>
