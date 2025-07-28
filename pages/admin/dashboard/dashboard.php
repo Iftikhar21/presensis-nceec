@@ -1,10 +1,15 @@
 <?php
 // Tambahkan ini dulu
+date_default_timezone_set('Asia/Jakarta');
 ini_set('session.cookie_lifetime', 0); // session hilang saat browser ditutup
 
 session_start();
 include '../../../includes/crud/crud-auth/crud-login.php';
 include '../../../includes/crud/crud-admin/crud-admin.php';
+include '../../../includes/crud/crud-teacher/crud-teacher.php';
+include '../../../includes/crud/crud-lessons/crud-lessons.php';
+include '../../../includes/crud/crud-material/crud-material.php';
+include '../../../includes/crud/crud-presence/crud-presence.php';
 
 
 // Pengecekan session utama
@@ -31,6 +36,13 @@ $email = $data_admin['admin']['email'];
 $role = ucfirst($data_admin['admin']['role']);
 
 $title_page = "NCEEC";
+$date_now = date('Y-m-d H:i:s');
+
+
+$countTutor = getAllCountTeachers();
+$countLessons = getAllCountLessons();
+$countMaterials = getAllCountMaterial();
+$countAbsentToday = getAllCountAbsentToday();
 ?>
 
 
@@ -179,12 +191,26 @@ $title_page = "NCEEC";
                             </div>
                             <div class="ml-4">
                                 <h3 class="text-base font-semibold mb-2">Jumlah Tutor</h3>
-                                <h3 class="text-5xl font-semibold mb-2 text-blue-600">36</h3>
+                                <h3 class="text-5xl font-semibold mb-2 text-blue-600"><?= $countTutor; ?></h3>
                                 <p class="text-muted">Terdaftar</p>
                             </div>
                         </div>
                     </div>
 
+                    <div class="content-card rounded-lg p-6 bg-white shadow-md animate-fade-in-up animate-delay-300 hover:shadow-lg transition-shadow duration-300">
+                        <div class="flex items-center">
+                            <div class="w-16 h-16 rounded-full flex items-center justify-center bg-yellow-200 mr-3">
+                                <i class="fa-solid fa-check text-2xl text-yellow-600"></i>
+                            </div>
+                            <div class="ml-4">
+                                <h3 class="text-base font-semibold mb-2">Jumlah Tutor yang Absen</h3>
+                                <h3 class="text-5xl font-semibold mb-2 text-yellow-600"><?= $countAbsentToday ;?></h3>
+                                <p class="text-muted">Tutor Absen Hari Ini</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div class="content-card rounded-lg p-6 bg-white shadow-md animate-fade-in-up animate-delay-200 hover:shadow-lg transition-shadow duration-300">
                         <div class="flex items-center">
                             <div class="w-16 h-16 rounded-full flex items-center justify-center bg-green-200 mr-3">
@@ -192,21 +218,7 @@ $title_page = "NCEEC";
                             </div>
                             <div class="ml-4">
                                 <h3 class="text-base font-semibold mb-2">List Materi</h3>
-                                <h3 class="text-5xl font-semibold mb-2 text-green-600">36</h3>
-                                <p class="text-muted">Tersedia</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="content-card rounded-lg p-6 bg-white shadow-md animate-fade-in-up animate-delay-300 hover:shadow-lg transition-shadow duration-300">
-                        <div class="flex items-center">
-                            <div class="w-16 h-16 rounded-full flex items-center justify-center bg-yellow-200 mr-3">
-                                <i class="fa-solid fa-calendar text-2xl text-yellow-600"></i>
-                            </div>
-                            <div class="ml-4">
-                                <h3 class="text-base font-semibold mb-2">Jumlah Kelas</h3>
-                                <h3 class="text-5xl font-semibold mb-2 text-yellow-600">36</h3>
+                                <h3 class="text-5xl font-semibold mb-2 text-green-600"><?= $countMaterials; ?></h3>
                                 <p class="text-muted">Tersedia</p>
                             </div>
                         </div>
@@ -219,7 +231,7 @@ $title_page = "NCEEC";
                             </div>
                             <div class="ml-4">
                                 <h3 class="text-base font-semibold mb-2">Jumlah Pelajaran</h3>
-                                <h3 class="text-5xl font-semibold mb-2 text-purple-600">36</h3>
+                                <h3 class="text-5xl font-semibold mb-2 text-purple-600"><?= $countLessons; ?></h3>
                                 <p class="text-muted">Tersedia</p>
                             </div>
                         </div>
