@@ -43,3 +43,35 @@ function getAllCountMaterial() {
     $row = mysqli_fetch_assoc($result);
     return (int)$row['count'];
 }
+
+function getMaterialsByLesson($lessonId) {
+    $conn = connectDatabase();
+    $lessonId = mysqli_real_escape_string($conn, $lessonId);
+    $query = "SELECT * FROM materi WHERE id_pelajaran = '$lessonId'";
+    $result = mysqli_query($conn, $query);
+
+    if (!$result) {
+        return [];
+    }
+
+    $materials = [];
+    while ($row = mysqli_fetch_assoc($result)) {
+        $materials[] = $row;
+    }
+
+    return $materials;
+}
+
+function getMaterialCountByLesson($lessonId) {
+    $conn = connectDatabase();
+    $lessonId = mysqli_real_escape_string($conn, $lessonId);
+    $query = "SELECT COUNT(*) as count FROM materi WHERE id_pelajaran = '$lessonId'";
+    $result = mysqli_query($conn, $query);
+
+    if (!$result) {
+        return 0;
+    }
+
+    $row = mysqli_fetch_assoc($result);
+    return (int)$row['count'];
+}

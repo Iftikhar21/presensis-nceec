@@ -3,7 +3,7 @@ require_once(__DIR__ . '/../../../config.php');
 
 function getAllTeachers() {
     $conn = connectDatabase();
-    $query = "SELECT * FROM tutor";
+    $query = "SELECT * FROM tutor INNER JOIN pelajaran ON tutor.id_pelajaran = pelajaran.id_pelajaran";
     $result = mysqli_query($conn, $query);
 
     if (!$result) {

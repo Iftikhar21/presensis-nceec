@@ -3,7 +3,9 @@ require_once(__DIR__ . '/../../../config.php');
 
 function getAllLessons() {
     $conn = connectDatabase();
-    $query = "SELECT * FROM pelajaran";
+    $query = "SELECT p.*, 
+              (SELECT COUNT(*) FROM materi WHERE id_pelajaran = p.id_pelajaran) as jumlah_materi
+              FROM pelajaran p";
     $result = mysqli_query($conn, $query);
 
     if (!$result) {
