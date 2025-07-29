@@ -441,7 +441,7 @@ $title_page = "NCEEC";
 
                     <div class="mb-6">
                         <label class="block text-sm font-medium text-gray-700 mb-2">Waktu Pembelajaran *</label>
-                        <input type="datetime-local" id="waktu-pembelajaran" name="waktu" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" required>
+                        <input type="datetime-local" id="waktu-pembelajaran" name="waktu" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
                     </div>
 
                     <div class="flex justify-end space-x-4">
@@ -813,7 +813,7 @@ $title_page = "NCEEC";
                 document.getElementById('tutor-select').value = material.id_tutor;
                 document.getElementById('pelajaran-select').value = material.id_pelajaran;
                 document.getElementById('materi-content').value = material.isi_materi;
-                document.getElementById('waktu-pembelajaran').value = material.waktu.replace(' ', 'T');
+                document.getElementById('waktu-pembelajaran').value = material.waktu;
                 document.getElementById('material-modal').classList.remove('hidden');
             } else {
                 showNotification('Error: ' + result.message, 'error');
@@ -952,7 +952,7 @@ $title_page = "NCEEC";
 
         function logout() {
             if (confirm('Apakah Anda yakin ingin logout?')) {
-                window.location.href = '../../../includes/crud/crud-auth/logout.php';
+                window.location.href = '../../../pages/auth/logout.php';
             }
         }
 
