@@ -1,41 +1,29 @@
 <?php
 require_once(__DIR__ . '/../../../config.php');
-function getAllTeacher() {
-    $conn = connectDatabase();
-    $query = "SELECT * FROM users WHERE role = 'teacher'";
-    $result = mysqli_query($conn, $query);
-    
-    if (!$result) {
-        return [
-            "status" => false,
-            "message" => "Error fetching admins: " . mysqli_error($conn)
-        ];
 
-function getAllTeachers() {
+function getAllTeachers()
+{
     $conn = connectDatabase();
-    $query = "SELECT * FROM tutor INNER JOIN pelajaran ON tutor.id_pelajaran = pelajaran.id_pelajaran";
+    $query = "SELECT * FROM tutor";
     $result = mysqli_query($conn, $query);
 
     if (!$result) {
         return [];
     }
 
-    $teachers = [];
+    $tutorList = [];
     while ($row = mysqli_fetch_assoc($result)) {
-        $teachers[] = $row;
+        $tutorList[] = $row;
     }
-
-    return [
-        "status" => true,
-        "teachers" => $teachers
-    ];
+    return $tutorList;
 }
 
-function getTeacherWhereId($id) {
+function getTeacherWhereId($id)
+{
     $conn = connectDatabase();
     $query = "SELECT * FROM users WHERE id = '$id' AND role = 'teacher'";
     $result = mysqli_query($conn, $query);
-    
+
     if (!$result) {
         return [
             "status" => false,
@@ -50,26 +38,11 @@ function getTeacherWhereId($id) {
         "teacher" => $teacher
     ];
 }
-?>
-    return $teachers;
-}
 
-function getTeachersWhereId($id) {
+function getAllCountTeachers()
+{
     $conn = connectDatabase();
-    $id = mysqli_real_escape_string($conn, $id);
-    $query = "SELECT * FROM tutor WHERE id_tutor = '$id'";
-    $result = mysqli_query($conn, $query);
-
-    if (!$result) {
-        return [];
-    }
-
-    return mysqli_fetch_assoc($result);
-}
-
-function getAllCountTeachers() {
-    $conn = connectDatabase();
-    $query = "SELECT COUNT(*) as count FROM tutor";
+    $query = "SELECT COUNT(*) as count FROM users WHERE role = 'teacher'";
     $result = mysqli_query($conn, $query);
 
     if (!$result) {
