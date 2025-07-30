@@ -5,6 +5,7 @@ include '../../../includes/crud/crud-auth/crud-login.php';
 include '../../../includes/crud/crud-admin/crud-admin.php';
 include '../../../includes/crud/crud-lessons/crud-lessons.php';
 include '../../../includes/crud/crud-material/crud-material.php';
+include '../../../includes/crud/crud-teacher/crud-teacher.php';
 
 // Pengecekan session
 if (!isset($_SESSION['username']) && !isset($_SESSION['ID'])) {
@@ -24,6 +25,54 @@ $username = $data_admin['admin']['username'];
 $role = ucfirst($data_admin['admin']['role']);
 $title_page = "NCEEC";
 
+// Handle AJAX requests
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+    header('Content-Type: application/json');
+
+    switch ($_POST['action']) {
+        case 'add':
+            $result = insertMateri(
+                $_POST['id_tutor'],
+                $_POST['id_pelajaran'],
+                $_POST['isi_materi'],
+                $_POST['waktu']
+            );
+            echo json_encode($result);
+            exit;
+
+        case 'update':
+            $result = updateMateri(
+                $_POST['id_materi'],
+                $_POST['id_tutor'],
+                $_POST['id_pelajaran'],
+                $_POST['isi_materi'],
+                $_POST['waktu']
+            );
+            echo json_encode($result);
+            exit;
+
+        case 'delete':
+            $result = deleteMateri($_POST['id_materi']);
+            echo json_encode($result);
+            exit;
+
+        case 'get_all':
+            $result = getAllMaterial();
+            echo json_encode($result);
+            exit;
+
+        case 'get_by_id':
+            $result = getMaterialWhereId($_POST['id_materi']);
+            echo json_encode($result);
+            exit;
+
+        case 'get_materials_by_lesson':
+            $result = getMaterialsByLesson($_POST['lesson_id']);
+            echo json_encode(['status' => true, 'materi' => $result]);
+            exit;
+    }
+}
+
 // Ambil semua pelajaran
 $lessons = getAllLessons();
 $totalLessons = count($lessons);
@@ -31,7 +80,10 @@ $totalLessons = count($lessons);
 // Ambil materi berdasarkan pelajaran yang dipilih (jika ada)
 $selectedLesson = isset($_GET['lesson_id']) ? $_GET['lesson_id'] : null;
 $materials = $selectedLesson ? getMaterialsByLesson($selectedLesson) : [];
-$totalMaterials = getMaterialCountByLesson($selectedLesson);
+$totalMaterials = $selectedLesson ? getMaterialCountByLesson($selectedLesson) : 0;
+
+// Get tutor list for dropdown
+$tutor_list = getAllTeachers();
 ?>
 
 <!DOCTYPE html>
@@ -61,6 +113,76 @@ $totalMaterials = getMaterialCountByLesson($selectedLesson);
         .active-lesson {
             border-left: 4px solid #3B82F6;
             background-color: #EFF6FF;
+        }
+
+        .animate-fade-in-down {
+            animation: fadeInDown 0.5s ease-out;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .sidebar-transition {
+            transition: transform 0.3s ease-in-out;
+        }
+
+        .btn-hover:hover {
+            background-color: rgba(59, 130, 246, 0.1);
+        }
+
+        .btn-focus:focus {
+            outline: 2px solid rgb(59, 130, 246);
+            outline-offset: 2px;
+        }
+
+        .menu-item {
+            transition: all 0.2s ease-in-out;
+        }
+
+        .menu-item:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            transform: translateX(4px);
+        }
+
+        .menu-item.active {
+            background-color: rgba(59, 130, 246, 0.2);
+            border-right: 3px solid rgb(59, 130, 246);
+        }
+
+        .content-card {
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+
+        .content-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .rotate-180 {
+            transform: rotate(180deg);
+        }
+
+        /* Loading spinner */
+        .fa-spinner {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* Modal styling */
+        .modal-backdrop {
+            backdrop-filter: blur(5px);
         }
     </style>
 </head>
@@ -183,9 +305,6 @@ $totalMaterials = getMaterialCountByLesson($selectedLesson);
                                 <span class="text-xs text-gray-500">
                                     <?= $lesson['jumlah_materi'] ?? 0 ?> Materi
                                 </span>
-                                <!-- <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                    <?= htmlspecialchars($lesson['tingkat_kesulitan'] ?? 'Medium') ?>
-                                </span> -->
                             </div>
                         </a>
                     <?php endforeach; ?>
@@ -214,7 +333,7 @@ $totalMaterials = getMaterialCountByLesson($selectedLesson);
                             </p>
                         </div>
                         <div class="text-right">
-                            <h3 class="text-xl md:text-3xl font-bold text-blue-600 mb-1"><?= $totalMaterials ?></h3>
+                            <h3 class="text-xl md:text-3xl font-bold text-blue-600 mb-1" id="total-materi-count"><?= $totalMaterials ?></h3>
                             <p class="text-xs md:text-sm text-muted">Total Materi</p>
                         </div>
                     </div>
@@ -225,152 +344,128 @@ $totalMaterials = getMaterialCountByLesson($selectedLesson);
                         <h3 class="text-lg font-semibold text-gray-800">
                             Materi untuk <?= htmlspecialchars($currentLesson['pelajaran']) ?>
                         </h3>
-                        <button onclick="addMaterial(<?= $selectedLesson ?>)"
+                        <button onclick="openAddModal()"
                             class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-150 flex items-center">
                             <i class="fas fa-plus mr-2"></i>
                             Tambah Materi
                         </button>
                     </div>
 
-                    <!-- Tabel Materi -->
-                    <div class="overflow-x-auto">
-                        <!-- Filter Section -->
-                        <div class="p-6 mb-6 border border-gray-200 rounded-lg bg-gray-50">
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                <!-- Filter Judul Materi -->
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">Judul Materi</label>
-                                    <div class="relative">
-                                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                            <svg class="h-5 w-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                                                <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"></path>
-                                            </svg>
-                                        </div>
-                                        <input
-                                            type="text"
-                                            id="filterJudul"
-                                            placeholder="Cari judul materi..."
-                                            class="pl-10 w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-150">
+                    <!-- Filter Section -->
+                    <div class="p-6 mb-6 border border-gray-200 rounded-lg bg-gray-50">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Judul Materi</label>
+                                <div class="relative">
+                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <svg class="h-5 w-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"></path>
+                                        </svg>
                                     </div>
-                                </div>
-
-                                <!-- Filter Tanggal -->
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">Tanggal Upload</label>
                                     <input
-                                        type="date"
-                                        id="filterTanggal"
-                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-150">
-                                </div>
-
-                                <!-- Action Buttons -->
-                                <div class="flex items-end space-x-3">
-                                    <button
-                                        onclick="resetFilters()"
-                                        class="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-150 flex items-center justify-center">
-                                        <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                                        </svg>
-                                        Reset
-                                    </button>
-                                    <button
-                                        onclick="applyFilters()"
-                                        class="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-150 flex items-center justify-center">
-                                        <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                                        </svg>
-                                        Terapkan
-                                    </button>
+                                        type="text"
+                                        id="filterJudul"
+                                        placeholder="Cari judul materi..."
+                                        class="pl-10 w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-150">
                                 </div>
                             </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Tanggal Upload</label>
+                                <input
+                                    type="date"
+                                    id="filterTanggal"
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-150">
+                            </div>
+
+                            <div class="flex items-end space-x-3">
+                                <button
+                                    onclick="resetFilters()"
+                                    class="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-150 flex items-center justify-center">
+                                    <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                    </svg>
+                                    Reset
+                                </button>
+                                <button
+                                    onclick="applyFilters()"
+                                    class="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-150 flex items-center justify-center">
+                                    <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                                    </svg>
+                                    Terapkan
+                                </button>
+                            </div>
                         </div>
+                    </div>
+
+                    <!-- Tabel Materi -->
+                    <div class="overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead class="bg-gray-100">
                                 <tr>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">ID Materi</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Judul Materi</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Tutor</th>
                                     <th class="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">Tanggal Upload</th>
                                     <th class="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-200" id="tableBody">
-                                <?php if (count($materials) > 0): ?>
-                                    <?php foreach ($materials as $index => $material): ?>
-                                        <tr class="hover:bg-gray-50 transition duration-150">
-                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800"><?= $material['id_materi'] ?></td>
-                                            <td class="px-6 py-4 whitespace-nowrap">
-                                                <div class="flex items-center">
-                                                    <div class="flex-shrink-0 h-10 w-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                                                        <i class="fas fa-file-alt text-blue-600"></i>
-                                                    </div>
-                                                    <div class="ml-4">
-                                                        <div class="text-sm font-medium text-gray-900"><?= htmlspecialchars($material['isi_materi']) ?></div>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
-                                                <?= htmlspecialchars($material['waktu']) ?>
-                                            </td>
-                                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                                <div class="flex justify-center space-x-3">
-                                                    <button onclick="viewMaterial(<?= $material['id_materi'] ?>)" class="text-blue-600 hover:text-blue-900 transition duration-150" title="Lihat">
-                                                        <i class="fas fa-eye"></i>
-                                                    </button>
-                                                    <button onclick="editMaterial(<?= $material['id_materi'] ?>)" class="text-yellow-600 hover:text-yellow-900 transition duration-150" title="Edit">
-                                                        <i class="fas fa-edit"></i>
-                                                    </button>
-                                                    <button onclick="deleteMaterial(<?= $material['id_materi'] ?>)" class="text-red-600 hover:text-red-900 transition duration-150" title="Hapus">
-                                                        <i class="fas fa-trash"></i>
-                                                    </button>
-                                                    <a href="<?= htmlspecialchars($material['id_materi']) ?>" download class="text-green-600 hover:text-green-900 transition duration-150" title="Download">
-                                                        <i class="fas fa-download"></i>
-                                                    </a>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                <?php else: ?>
-                                    <tr>
-                                        <td colspan="5" class="px-6 py-4 text-center text-sm text-gray-500">
-                                            Tidak ada materi untuk pelajaran ini
-                                        </td>
-                                    </tr>
-                                <?php endif; ?>
+                                <!-- Content will be loaded here via JavaScript -->
                             </tbody>
                         </table>
-                        <!-- Pagination -->
-                        <div class="px-6 py-4 flex items-center justify-between border-t border-gray-200 bg-gray-50">
-                            <div class="flex-1 flex justify-between sm:hidden">
-                                <button class="prev-page-mobile relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
-                                    Previous
-                                </button>
-                                <button class="next-page-mobile ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
-                                    Next
-                                </button>
+
+                        <!-- Loading State -->
+                        <div id="loading-state" class="text-center py-8 hidden">
+                            <i class="fa-solid fa-spinner fa-spin text-2xl text-gray-400 mb-2"></i>
+                            <p class="text-gray-500">Memuat data...</p>
+                        </div>
+
+                        <!-- Empty State -->
+                        <div id="empty-state" class="text-center py-12 hidden">
+                            <i class="fa-solid fa-folder-open text-4xl text-gray-300 mb-4"></i>
+                            <h3 class="text-lg font-medium text-gray-900 mb-2">Belum ada materi</h3>
+                            <p class="text-gray-500 mb-4">Mulai dengan menambahkan materi pembelajaran pertama</p>
+                            <button onclick="openAddModal()" class="btn-primary px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                                <i class="fa-solid fa-plus mr-2"></i>
+                                Tambah Materi
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div class="px-6 py-4 flex items-center justify-between border-t border-gray-200 bg-gray-50">
+                        <div class="flex-1 flex justify-between sm:hidden">
+                            <button class="prev-page-mobile relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                Previous
+                            </button>
+                            <button class="next-page-mobile ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                Next
+                            </button>
+                        </div>
+                        <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                            <div>
+                                <p class="pagination-info text-sm text-gray-700">
+                                    <!-- Akan diisi oleh JavaScript -->
+                                </p>
                             </div>
-                            <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-                                <div>
-                                    <p class="pagination-info text-sm text-gray-700">
-                                        <!-- Akan diisi oleh JavaScript -->
-                                    </p>
-                                </div>
-                                <div>
-                                    <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
-                                        <button class="prev-page relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
-                                            <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
-                                                <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"></path>
-                                            </svg>
-                                        </button>
-                                        <div class="page-buttons flex">
-                                            <!-- Tombol halaman akan diisi oleh JavaScript -->
-                                        </div>
-                                        <button class="next-page relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
-                                            <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
-                                                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
-                                            </svg>
-                                        </button>
-                                    </nav>
-                                </div>
+                            <div>
+                                <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+                                    <button class="prev-page relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                        <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                                        </svg>
+                                    </button>
+                                    <div class="page-buttons flex">
+                                        <!-- Tombol halaman akan diisi oleh JavaScript -->
+                                    </div>
+                                    <button class="next-page relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                        <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+                                        </svg>
+                                    </button>
+                                </nav>
                             </div>
                         </div>
                     </div>
@@ -388,14 +483,208 @@ $totalMaterials = getMaterialCountByLesson($selectedLesson);
         </div>
     </footer>
 
+    <!-- Add/Edit Modal -->
+    <div id="material-modal" class="modal fixed inset-0 bg-black bg-opacity-50 modal-backdrop z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-fade-in-down">
+            <div class="p-6 border-b border-gray-200">
+                <div class="flex items-center justify-between">
+                    <h3 id="modal-title" class="text-lg font-semibold">Tambah Materi Baru</h3>
+                    <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600">
+                        <i class="fa-solid fa-times text-xl"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="p-6">
+                <form id="material-form">
+                    <input type="hidden" id="material-id" value="">
+                    <input type="hidden" id="form-action" value="add">
+                    <input type="hidden" id="lesson-id" value="<?= $selectedLesson ?>">
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Tutor *</label>
+                            <select id="tutor-select" name="id_tutor" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" required>
+                                <option value="">Pilih Tutor</option>
+                                <?php foreach ($tutor_list as $tutor): ?>
+                                    <option value="<?= $tutor['id_tutor'] ?>"><?= $tutor['nama_tutor'] ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Pelajaran *</label>
+                            <select id="pelajaran-select" name="id_pelajaran" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" required>
+                                <option value="<?= $selectedLesson ?>"><?= htmlspecialchars($currentLesson['pelajaran']) ?></option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Isi Materi *</label>
+                        <textarea id="materi-content" name="isi_materi" rows="6" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Masukkan isi materi pembelajaran..." required></textarea>
+                    </div>
+
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Waktu Pembelajaran *</label>
+                        <input type="datetime-local" id="waktu-pembelajaran" step="1" name="waktu" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" required>
+                    </div>
+
+                    <div class="flex justify-end space-x-4">
+                        <button type="button" onclick="closeModal()" class="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                            Batal
+                        </button>
+                        <button type="submit" id="submit-btn" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                            <i class="fa-solid fa-save mr-2"></i>
+                            <span id="submit-text">Simpan</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- View Detail Modal -->
+    <div id="detail-modal" class="fixed inset-0 bg-black bg-opacity-50 modal-backdrop z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto animate-fade-in-down">
+            <div class="p-6 border-b border-gray-200">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-lg font-semibold">Detail Materi</h3>
+                    <button onclick="closeDetailModal()" class="text-gray-400 hover:text-gray-600">
+                        <i class="fa-solid fa-times text-xl"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="p-6" id="detail-content">
+                <!-- Detail content will be loaded here -->
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.js"></script>
     <script src="../../../assets/js/sidebar.js"></script>
     <script>
-        // Data dan konfigurasi awal
-        const allMaterials = <?php echo json_encode($materials); ?>; // Ubah dari $allMaterials ke $materials
+        // Global variables
+        let allMaterials = <?php echo json_encode($materials); ?>;
         let filteredMaterials = [...allMaterials];
         let currentPage = 1;
         const rowsPerPage = 5;
+        let pelajaranData = <?= json_encode($lessons) ?>;
+        let tutorData = <?= json_encode($tutor_list) ?>;
+        const selectedLessonId = <?= json_encode($selectedLesson) ?>;
+
+        // Utility functions
+        function formatDateTime(dateStr) {
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('id-ID', {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function getPelajaranName(id) {
+            const pelajaran = pelajaranData.find(p => p.id_pelajaran == id);
+            return pelajaran ? pelajaran.pelajaran : 'Unknown';
+        }
+
+        function getTutorName(id) {
+            const tutor = tutorData.find(t => t.id_tutor == id);
+            return tutor ? tutor.nama_tutor : 'Unknown';
+        }
+
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 z-50 px-6 py-3 rounded-lg text-white ${
+                type === 'success' ? 'bg-green-500' : 
+                type === 'error' ? 'bg-red-500' : 'bg-blue-500'
+            } shadow-lg transform translate-x-full transition-transform duration-300`;
+            notification.innerHTML = `
+                <div class="flex items-center">
+                    <i class="fa-solid ${type === 'success' ? 'fa-check' : type === 'error' ? 'fa-times' : 'fa-info'} mr-2"></i>
+                    ${message}
+                </div>
+            `;
+
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+                notification.style.transform = 'translateX(0)';
+            }, 100);
+
+            setTimeout(() => {
+                notification.style.transform = 'translateX(100%)';
+                setTimeout(() => {
+                    if (document.body.contains(notification)) {
+                        document.body.removeChild(notification);
+                    }
+                }, 300);
+            }, 3000);
+        }
+
+        // AJAX Functions
+        function sendAjaxRequest(action, data = {}) {
+            return new Promise((resolve, reject) => {
+                const formData = new FormData();
+                formData.append('action', action);
+
+                for (const key in data) {
+                    formData.append(key, data[key]);
+                }
+
+                fetch(window.location.href, {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => resolve(data))
+                    .catch(error => reject(error));
+            });
+        }
+
+        // Data loading functions
+        async function loadMaterialsForLesson() {
+            if (!selectedLessonId) return;
+
+            const loadingState = document.getElementById('loading-state');
+            const emptyState = document.getElementById('empty-state');
+            const tableBody = document.getElementById('tableBody');
+
+            // Show loading
+            loadingState.classList.remove('hidden');
+            emptyState.classList.add('hidden');
+            tableBody.innerHTML = '';
+
+            try {
+                const result = await sendAjaxRequest('get_materials_by_lesson', {
+                    lesson_id: selectedLessonId
+                });
+
+                if (result.status) {
+                    allMaterials = result.materi || [];
+                    filteredMaterials = [...allMaterials];
+                    renderTable();
+                    updatePaginationInfo();
+                    document.getElementById('total-materi-count').textContent = allMaterials.length;
+                } else {
+                    showNotification('Error loading data: ' + result.message, 'error');
+                    allMaterials = [];
+                    filteredMaterials = [];
+                    renderTable();
+                }
+            } catch (error) {
+                console.error('AJAX Error:', error);
+                showNotification('Error loading data: ' + error.message, 'error');
+                allMaterials = [];
+                filteredMaterials = [];
+                renderTable();
+            }
+
+            loadingState.classList.add('hidden');
+        }
 
         // Fungsi untuk memfilter data
         function applyFilters() {
@@ -427,9 +716,18 @@ $totalMaterials = getMaterialCountByLesson($selectedLesson);
         // Fungsi untuk merender tabel
         function renderTable() {
             const tableBody = document.getElementById('tableBody');
+            const emptyState = document.getElementById('empty-state');
             const startIndex = (currentPage - 1) * rowsPerPage;
             const endIndex = startIndex + rowsPerPage;
             const paginatedMaterials = filteredMaterials.slice(startIndex, endIndex);
+
+            if (filteredMaterials.length === 0) {
+                emptyState.classList.remove('hidden');
+                tableBody.innerHTML = '';
+                return;
+            }
+
+            emptyState.classList.add('hidden');
 
             tableBody.innerHTML = paginatedMaterials.map(material => `
                 <tr class="hover:bg-gray-50 transition duration-150">
@@ -440,12 +738,15 @@ $totalMaterials = getMaterialCountByLesson($selectedLesson);
                                 <i class="fas fa-file-alt text-blue-600"></i>
                             </div>
                             <div class="ml-4">
-                                <div class="text-sm font-medium text-gray-900">${material.isi_materi || 'N/A'}</div>
+                                <div class="text-sm font-medium text-gray-900">${(material.isi_materi || 'N/A').substring(0, 50)}${(material.isi_materi || '').length > 50 ? '...' : ''}</div>
                             </div>
                         </div>
                     </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        ${getTutorName(material.id_tutor)}
+                    </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
-                        ${material.waktu || 'N/A'}
+                        ${formatDateTime(material.waktu) || 'N/A'}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
                         <div class="flex justify-center space-x-3">
@@ -458,30 +759,16 @@ $totalMaterials = getMaterialCountByLesson($selectedLesson);
                             <button onclick="deleteMaterial(${material.id_materi})" class="text-red-600 hover:text-red-900 transition duration-150" title="Hapus">
                                 <i class="fas fa-trash"></i>
                             </button>
-                            <a href="${material.id_materi}" download class="text-green-600 hover:text-green-900 transition duration-150" title="Download">
-                                <i class="fas fa-download"></i>
-                            </a>
                         </div>
                     </td>
                 </tr>
             `).join('');
-
-            // Jika tidak ada data
-            if (paginatedMaterials.length === 0) {
-                tableBody.innerHTML = `
-                    <tr>
-                        <td colspan="4" class="px-6 py-4 text-center text-sm text-gray-500">
-                            Tidak ada materi yang ditemukan
-                        </td>
-                    </tr>
-                `;
-            }
         }
 
         // Fungsi untuk update info pagination
         function updatePaginationInfo() {
             const totalPages = Math.ceil(filteredMaterials.length / rowsPerPage);
-            const startItem = (currentPage - 1) * rowsPerPage + 1;
+            const startItem = filteredMaterials.length === 0 ? 0 : (currentPage - 1) * rowsPerPage + 1;
             const endItem = Math.min(currentPage * rowsPerPage, filteredMaterials.length);
 
             document.querySelector('.pagination-info').textContent =
@@ -495,8 +782,8 @@ $totalMaterials = getMaterialCountByLesson($selectedLesson);
 
             if (prevPage) prevPage.disabled = currentPage === 1;
             if (prevPageMobile) prevPageMobile.disabled = currentPage === 1;
-            if (nextPage) nextPage.disabled = currentPage === totalPages;
-            if (nextPageMobile) nextPageMobile.disabled = currentPage === totalPages;
+            if (nextPage) nextPage.disabled = currentPage === totalPages || totalPages === 0;
+            if (nextPageMobile) nextPageMobile.disabled = currentPage === totalPages || totalPages === 0;
 
             // Update tombol halaman
             const pageButtonsContainer = document.querySelector('.page-buttons');
@@ -524,62 +811,244 @@ $totalMaterials = getMaterialCountByLesson($selectedLesson);
             updatePaginationInfo();
         }
 
-        // Fungsi untuk aksi materi
-        function addMaterial(lessonId) {
-            console.log('Tambah materi baru untuk pelajaran ID:', lessonId);
-            // window.location.href = `add-material.php?lesson_id=${lessonId}`;
+        // Modal functions
+        function openAddModal() {
+            document.getElementById('modal-title').textContent = 'Tambah Materi Baru';
+            document.getElementById('material-id').value = '';
+            document.getElementById('form-action').value = 'add';
+            document.getElementById('material-form').reset();
+            document.getElementById('pelajaran-select').value = selectedLessonId;
+            document.getElementById('material-modal').classList.remove('hidden');
         }
 
-        function viewMaterial(id) {
-            console.log('Lihat materi dengan ID:', id);
-            // window.location.href = `view-material.php?id=${id}`;
-        }
+        async function viewMaterial(id) {
+            const result = await sendAjaxRequest('get_by_id', {
+                id_materi: id
+            });
 
-        function editMaterial(id) {
-            console.log('Edit materi dengan ID:', id);
-            // window.location.href = `edit-material.php?id=${id}`;
-        }
-
-        function deleteMaterial(id) {
-            if (confirm('Apakah Anda yakin ingin menghapus materi ini?')) {
-                console.log('Hapus materi dengan ID:', id);
-                // Lakukan AJAX request atau form submission untuk menghapus data
+            if (result.status) {
+                const material = result.materi;
+                document.getElementById('detail-content').innerHTML = `
+                    <div class="space-y-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <h4 class="font-semibold text-gray-700 mb-2">Informasi Dasar</h4>
+                                <div class="space-y-3">
+                                    <div>
+                                        <span class="text-sm text-gray-500">Pelajaran:</span>
+                                        <p class="font-medium">${getPelajaranName(material.id_pelajaran)}</p>
+                                    </div>
+                                    <div>
+                                        <span class="text-sm text-gray-500">Tutor:</span>
+                                        <p class="font-medium">${getTutorName(material.id_tutor)}</p>
+                                    </div>
+                                    <div>
+                                        <span class="text-sm text-gray-500">Waktu:</span>
+                                        <p class="font-medium">${formatDateTime(material.waktu)}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <h4 class="font-semibold text-gray-700 mb-3">Isi Materi</h4>
+                            <div class="bg-gray-50 rounded-lg p-4">
+                                <p class="text-gray-700 leading-relaxed">${material.isi_materi}</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('detail-modal').classList.remove('hidden');
+            } else {
+                showNotification('Error: ' + result.message, 'error');
             }
+        }
+
+        async function editMaterial(id) {
+            const result = await sendAjaxRequest('get_by_id', {
+                id_materi: id
+            });
+
+            if (result.status) {
+                const material = result.materi;
+                document.getElementById('modal-title').textContent = 'Edit Materi';
+                document.getElementById('material-id').value = material.id_materi;
+                document.getElementById('form-action').value = 'update';
+                document.getElementById('tutor-select').value = material.id_tutor;
+                document.getElementById('pelajaran-select').value = material.id_pelajaran;
+                document.getElementById('materi-content').value = material.isi_materi;
+                document.getElementById('waktu-pembelajaran').value = material.waktu;
+                document.getElementById('material-modal').classList.remove('hidden');
+            } else {
+                showNotification('Error: ' + result.message, 'error');
+            }
+        }
+
+        async function deleteMaterial(id) {
+            if (confirm('Apakah Anda yakin ingin menghapus materi ini?')) {
+                const result = await sendAjaxRequest('delete', {
+                    id_materi: id
+                });
+
+                if (result.status) {
+                    showNotification('Materi berhasil dihapus', 'success');
+                    await loadMaterialsForLesson();
+                } else {
+                    showNotification('Error: ' + result.message, 'error');
+                }
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('material-modal').classList.add('hidden');
+        }
+
+        function closeDetailModal() {
+            document.getElementById('detail-modal').classList.add('hidden');
         }
 
         // Event listeners
         document.addEventListener('DOMContentLoaded', () => {
-            renderTable();
-            updatePaginationInfo();
+            if (selectedLessonId) {
+                renderTable();
+                updatePaginationInfo();
 
-            // Filter buttons
-            const applyFilterBtn = document.querySelector('button[onclick="applyFilters()"]');
-            const resetFilterBtn = document.querySelector('button[onclick="resetFilters()"]');
+                // Event listeners for filter inputs
+                document.getElementById('filterJudul').addEventListener('input', applyFilters);
+                document.getElementById('filterTanggal').addEventListener('change', applyFilters);
 
-            if (applyFilterBtn) applyFilterBtn.addEventListener('click', applyFilters);
-            if (resetFilterBtn) resetFilterBtn.addEventListener('click', resetFilters);
+                // Pagination controls
+                const prevPage = document.querySelector('.prev-page');
+                const nextPage = document.querySelector('.next-page');
+                const prevPageMobile = document.querySelector('.prev-page-mobile');
+                const nextPageMobile = document.querySelector('.next-page-mobile');
 
-            // Pagination controls
-            const prevPage = document.querySelector('.prev-page');
-            const nextPage = document.querySelector('.next-page');
-            const prevPageMobile = document.querySelector('.prev-page-mobile');
-            const nextPageMobile = document.querySelector('.next-page-mobile');
+                if (prevPage) prevPage.addEventListener('click', () => {
+                    if (currentPage > 1) changePage(currentPage - 1);
+                });
 
-            if (prevPage) prevPage.addEventListener('click', () => {
-                if (currentPage > 1) changePage(currentPage - 1);
+                if (nextPage) nextPage.addEventListener('click', () => {
+                    if (currentPage < Math.ceil(filteredMaterials.length / rowsPerPage)) changePage(currentPage + 1);
+                });
+
+                if (prevPageMobile) prevPageMobile.addEventListener('click', () => {
+                    if (currentPage > 1) changePage(currentPage - 1);
+                });
+
+                if (nextPageMobile) nextPageMobile.addEventListener('click', () => {
+                    if (currentPage < Math.ceil(filteredMaterials.length / rowsPerPage)) changePage(currentPage + 1);
+                });
+            }
+        });
+
+        // Form submission
+        document.getElementById('material-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const formData = {
+                id_materi: document.getElementById('material-id').value,
+                id_tutor: document.getElementById('tutor-select').value,
+                id_pelajaran: document.getElementById('pelajaran-select').value,
+                isi_materi: document.getElementById('materi-content').value,
+                waktu: document.getElementById('waktu-pembelajaran').value,
+                action: document.getElementById('form-action').value
+            };
+
+            try {
+                let result;
+                if (formData.action === 'add') {
+                    result = await sendAjaxRequest('add', formData);
+                } else {
+                    result = await sendAjaxRequest('update', formData);
+                }
+
+                if (result.status) {
+                    showNotification(
+                        formData.action === 'add' ?
+                        'Materi berhasil ditambahkan' :
+                        'Materi berhasil diperbarui',
+                        'success'
+                    );
+                    closeModal();
+                    await loadMaterialsForLesson();
+                } else {
+                    showNotification('Error: ' + result.message, 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showNotification('Terjadi kesalahan saat memproses data', 'error');
+            }
+        });
+
+        // User menu functionality
+        document.getElementById('user-menu-button').addEventListener('click', function() {
+            const menu = document.getElementById('user-menu');
+            const icon = document.getElementById('user-menu-icon');
+            menu.classList.toggle('hidden');
+            icon.classList.toggle('rotate-180');
+        });
+
+        // Close user menu when clicking outside
+        document.addEventListener('click', function(e) {
+            const button = document.getElementById('user-menu-button');
+            const menu = document.getElementById('user-menu');
+            const icon = document.getElementById('user-menu-icon');
+
+            if (!button.contains(e.target) && !menu.contains(e.target)) {
+                menu.classList.add('hidden');
+                icon.classList.remove('rotate-180');
+            }
+        });
+
+        // Sidebar functionality
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('overlay');
+
+            sidebar.classList.toggle('-translate-x-full');
+            overlay.classList.toggle('hidden');
+        }
+
+        function setActivePage(pageName) {
+            document.getElementById('page-title').textContent = pageName;
+
+            // Update active menu item
+            document.querySelectorAll('.menu-item').forEach(item => {
+                item.classList.remove('active');
             });
 
-            if (nextPage) nextPage.addEventListener('click', () => {
-                if (currentPage < Math.ceil(filteredMaterials.length / rowsPerPage)) changePage(currentPage + 1);
-            });
+            if (pageName === 'List Materi') {
+                document.getElementById('menu-materi').classList.add('active');
+            } else if (pageName === 'Dashboard') {
+                document.getElementById('menu-dashboard').classList.add('active');
+            }
+        }
 
-            if (prevPageMobile) prevPageMobile.addEventListener('click', () => {
-                if (currentPage > 1) changePage(currentPage - 1);
-            });
+        function logout() {
+            if (confirm('Apakah Anda yakin ingin logout?')) {
+                window.location.href = '../../../pages/auth/logout.php';
+            }
+        }
 
-            if (nextPageMobile) nextPageMobile.addEventListener('click', () => {
-                if (currentPage < Math.ceil(filteredMaterials.length / rowsPerPage)) changePage(currentPage + 1);
-            });
+        // Close modals when clicking outside
+        document.getElementById('material-modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+
+        document.getElementById('detail-modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeDetailModal();
+            }
+        });
+
+        // Close modals with Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeModal();
+                closeDetailModal();
+            }
         });
     </script>
 </body>
