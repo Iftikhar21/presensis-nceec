@@ -233,6 +233,7 @@ $countTutor = getAllCountTeachers();
                                     <th class="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">Nama Tutor</th>
                                     <th class="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">Mata Pelajaran</th>
                                     <th class="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">Bergabung</th>
+                                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">Email</th>
                                 </tr>
                             </thead>
                             <tbody id="tableBody" class="bg-white divide-y divide-gray-200">
@@ -364,6 +365,9 @@ $countTutor = getAllCountTeachers();
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
                     ${teacher.bergabung || 'N/A'}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                    ${teacher.email || 'N/A'}
                 </td>
             </tr>
         `).join('');
