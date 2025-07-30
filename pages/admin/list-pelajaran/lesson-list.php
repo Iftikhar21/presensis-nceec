@@ -35,6 +35,46 @@ $title_page = "NCEEC";
 
 $lessons = getAllLessons();
 $countLessons = getAllCountLessons();
+
+// add Lessons
+if (isset($_POST['add-lessons'])) {
+    $nama_pelajaran = $_POST['pelajaran'];
+    $add_lesson = addLessons($nama_pelajaran);
+
+    if ($add_lesson) {
+        $_SESSION['success_message'] = "Pelajaran berhasil ditambahkan!";
+        header("Location: lesson-list.php");
+        exit();
+    }
+}
+
+if (isset($_POST['edit-lessons'])) {
+    $nama_pelajaran = $_POST['pelajaran'];
+    $id_pelajaran = $_POST['id_pelajaran'];
+    $edit_lesson = editLessons($nama_pelajaran, $id_pelajaran);
+
+    if ($edit_lesson) {
+        $_SESSION['success_message'] = "Pelajaran berhasil diperbarui!";
+        header("Location: lesson-list.php");
+        exit();
+    } else {
+        echo "<script>alert('Gagal mengupdate pelajaran');</script>";
+    }
+}
+
+// delete Lessons
+if (isset($_POST['delete-lessons'])) {
+    $id_pelajaran = $_POST['id_pelajaran'];
+    $delete_lesson = deleteLessons($id_pelajaran);
+
+    if ($delete_lesson) {
+        $_SESSION['success_message'] = "Pelajaran berhasil dihapus!";
+        header("Location: lesson-list.php");
+        exit();
+    } else {
+        echo "<script>alert('Gagal menghapus pelajaran');</script>";
+    }
+}
 ?>
 
 
@@ -160,9 +200,9 @@ $countLessons = getAllCountLessons();
 
                 <!-- Filter Section -->
                 <div class="p-6 mb-6 border border-gray-200 rounded-lg bg-gray-50">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <!-- Filter Nama -->
-                        <div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Filter Nama (diperpendek) -->
+                        <div class="w-full"> <!-- Menambahkan fixed width -->
                             <label class="block text-sm font-medium text-gray-700 mb-2">Nama Pelajaran</label>
                             <div class="relative">
                                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -182,7 +222,7 @@ $countLessons = getAllCountLessons();
                         <div class="flex items-end space-x-3">
                             <button
                                 onclick="resetFilters()"
-                                class="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-150 flex items-center justify-center">
+                                class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-150 flex items-center justify-center">
                                 <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
                                 </svg>
@@ -190,11 +230,19 @@ $countLessons = getAllCountLessons();
                             </button>
                             <button
                                 onclick="applyFilters()"
-                                class="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-150 flex items-center justify-center">
+                                class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-150 flex items-center justify-center">
                                 <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                                 </svg>
                                 Terapkan
+                            </button>
+                            <button
+                                onclick="addLessons()"
+                                class="w-48 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-150 flex items-center justify-center">
+                                <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                                </svg>
+                                Tambah Pelajaran
                             </button>
                         </div>
                     </div>
@@ -212,35 +260,13 @@ $countLessons = getAllCountLessons();
                                     </th>
                                     <th class="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">ID Pelajaran</th>
                                     <th class="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">Pelajaran</th>
+                                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">Dibuat Pada</th>
+                                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">Diperbarui Pada</th>
                                     <th class="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody id="tableBody" class="bg-white divide-y divide-gray-200">
-                                <?php foreach ($lessons as $lesson): ?>
-                                    <tr class="hover:bg-gray-50 transition duration-150 text-center">
-                                        <td class="px-6 py-4 whitespace-nowrap">
-                                            <input type="checkbox" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-4 w-4">
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 text-center">
-                                            <?= htmlspecialchars($lesson['id_pelajaran'] ?? 'N/A') ?>
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 text-center">
-                                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 text-center">
-                                                <?= htmlspecialchars($lesson['pelajaran'] ?? 'N/A') ?>
-                                            </span>
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
-                                            <div class="flex justify-center space-x-3">
-                                                <button onclick="editTutor(<?= $lesson['id_pelajaran'] ?>)" class="text-blue-600 hover:text-blue-900 transition duration-150" title="Edit">
-                                                    <i class="fas fa-edit"></i>
-                                                </button>
-                                                <button onclick="deleteTutor(<?= $lesson['id_pelajaran'] ?>)" class="text-red-600 hover:text-red-900 transition duration-150" title="Hapus">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
+
                             </tbody>
                         </table>
                     </div>
@@ -293,6 +319,144 @@ $countLessons = getAllCountLessons();
         </div>
     </footer>
 
+    <div id="modalOverlay" class="fixed inset-0 bg-black bg-opacity-50 hidden z-40 transition-opacity duration-300"></div>
+
+    <!-- modal area -->
+    <div id="addLessonModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md transform transition-all duration-300 scale-95 opacity-0" id="modalContent">
+            <!-- Modal Header -->
+            <div class="px-6 py-4 border-b border-gray-200">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-lg font-semibold text-gray-900">Tambah Pelajaran Baru</h3>
+                    <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 transition duration-150">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Modal Body -->
+            <form id="addLessonForm" method="POST" class="px-6 py-4">
+                <div class="space-y-4">
+                    <div>
+                        <label for="pelajaran" class="block text-sm font-medium text-gray-700 mb-2">
+                            Nama Pelajaran
+                        </label>
+                        <input type="text" id="pelajaran" name="pelajaran" required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-150"
+                            placeholder="Masukkan nama pelajaran">
+                    </div>
+                </div>
+
+                <!-- Error Message -->
+                <div id="errorMessage" class="mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-md hidden">
+                    <div class="flex items-center">
+                        <i class="fas fa-exclamation-circle mr-2"></i>
+                        <span id="errorText">Terjadi kesalahan</span>
+                    </div>
+                </div>
+            </form>
+
+            <!-- Modal Footer -->
+            <div class="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+                <button type="button" onclick="closeModal()"
+                    class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-150">
+                    Batal
+                </button>
+                <button type="submit" name="add-lessons" form="addLessonForm"
+                    class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-150">
+                    Tambah Pelajaran
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="editLessonModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md transform transition-all duration-300 scale-95 opacity-0">
+            <!-- Modal Header -->
+            <div class="px-6 py-4 border-b border-gray-200">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-lg font-semibold text-gray-900">Edit Pelajaran</h3>
+                    <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 transition duration-150">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Modal Body -->
+            <form id="editLessonForm" method="POST" class="px-6 py-4">
+                <input type="hidden" id="edit_id_pelajaran" name="id_pelajaran">
+                <div class="space-y-4">
+                    <div>
+                        <label for="edit_pelajaran" class="block text-sm font-medium text-gray-700 mb-2">
+                            Nama Pelajaran
+                        </label>
+                        <input type="text" id="edit_pelajaran" name="pelajaran" required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-150"
+                            placeholder="Masukkan nama pelajaran">
+                    </div>
+                </div>
+
+                <!-- Error Message -->
+                <div id="editErrorMessage" class="mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-md hidden">
+                    <div class="flex items-center">
+                        <i class="fas fa-exclamation-circle mr-2"></i>
+                        <span id="editErrorText">Terjadi kesalahan</span>
+                    </div>
+                </div>
+            </form>
+
+            <!-- Modal Footer -->
+            <div class="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+                <button type="button" onclick="closeModal()"
+                    class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-150">
+                    Batal
+                </button>
+                <button type="submit" name="edit-lessons" form="editLessonForm"
+                    class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-150">
+                    Simpan Perubahan
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="deleteLessonModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-sm transform transition-all duration-300 scale-95 opacity-0">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-lg font-semibold text-gray-900">Hapus Pelajaran</h3>
+                    <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 transition duration-150">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+
+            <form id="deleteLessonForm" method="POST" action="lesson-list.php">
+                <input type="hidden" id="delete_id_pelajaran" name="id_pelajaran">
+                <div class="px-6 py-4">
+                    <p class="text-gray-700">Anda yakin ingin menghapus pelajaran <span id="deleteLessonName" class="font-semibold"></span>?</p>
+                </div>
+
+                <div class="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+                    <button type="button" onclick="closeModal()"
+                        class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-150">
+                        Batal
+                    </button>
+                    <button type="submit" name="delete-lessons"
+                        class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 transition duration-150">
+                        Hapus
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Success Notification -->
+    <div id="successNotification" class="fixed bottom-4 right-4 z-50 hidden">
+        <div class="bg-green-500 text-white px-6 py-4 rounded-lg shadow-lg flex items-center animate-fade-in-up">
+            <i class="fas fa-check-circle text-xl mr-3"></i>
+            <span id="successMessage"></span>
+        </div>
+    </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindplus/elements@1" type="module"></script>
@@ -303,7 +467,7 @@ $countLessons = getAllCountLessons();
         const allLessons = <?php echo json_encode($lessons); ?>;
         let filteredLessons = [...allLessons];
         let currentPage = 1;
-        const rowsPerPage = 5;
+        const rowsPerPage = 10;
 
         // Fungsi untuk memfilter data
         function applyFilters() {
@@ -328,12 +492,25 @@ $countLessons = getAllCountLessons();
             updatePaginationInfo();
         }
 
+
         // Fungsi untuk merender tabel
         function renderTable() {
             const tableBody = document.getElementById('tableBody');
             const startIndex = (currentPage - 1) * rowsPerPage;
             const endIndex = startIndex + rowsPerPage;
             const paginatedlessons = filteredLessons.slice(startIndex, endIndex);
+
+            const formatDate = (dateStr) => {
+                if (!dateStr) return 'N/A';
+                const date = new Date(dateStr);
+                return date.toLocaleString('id-ID', {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            };
 
             tableBody.innerHTML = paginatedlessons.map(lesson => `
             <tr class="hover:bg-gray-50 transition duration-150 text-center">
@@ -348,12 +525,18 @@ $countLessons = getAllCountLessons();
                         ${lesson.pelajaran || 'N/A'}
                     </span>
                 </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 text-center">
+                    ${formatDate(lesson.created_at)}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 text-center">
+                    ${formatDate(lesson.updated_at)}
+                </td>
                 <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
                     <div class="flex justify-center space-x-3">
-                        <button onclick="editTutor(${lesson.id_pelajaran})" class="text-blue-600 hover:text-blue-900 transition duration-150" title="Edit">
+                        <button onclick="editLesson(${lesson.id_pelajaran})" class="text-blue-600 hover:text-blue-900 transition duration-150" title="Edit">
                             <i class="fas fa-edit"></i>
                         </button>
-                        <button onclick="deleteTutor(${lesson.id_pelajaran})" class="text-red-600 hover:text-red-900 transition duration-150" title="Hapus">
+                        <button onclick="deleteLesson(${lesson.id_pelajaran})" class="text-red-600 hover:text-red-900 transition duration-150" title="Hapus">
                             <i class="fas fa-trash"></i>
                         </button>
                     </div>
@@ -397,20 +580,6 @@ $countLessons = getAllCountLessons();
             updatePaginationInfo();
         }
 
-        // Fungsi edit tutor
-        function editTutor(id) {
-            console.log('Edit Pelajaran dengan ID:', id);
-            // window.location.href = `edit-tutor.php?id=${id}`;
-        }
-
-        // Fungsi delete tutor
-        function deleteTutor(id) {
-            if (confirm('Apakah Anda yakin ingin menghapus Pelajaran ini?')) {
-                console.log('Hapus Pelajaran dengan ID:', id);
-                // Lakukan AJAX request atau form submission untuk menghapus data
-            }
-        }
-
         // Event listeners
         document.addEventListener('DOMContentLoaded', () => {
             renderTable();
@@ -442,7 +611,150 @@ $countLessons = getAllCountLessons();
                 document.querySelectorAll('#tableBody input[type="checkbox"]')
                     .forEach(checkbox => checkbox.checked = this.checked);
             });
+
+            <?php if (isset($_SESSION['success_message'])): ?>
+                showSuccessNotification("<?php echo $_SESSION['success_message']; ?>");
+                <?php unset($_SESSION['success_message']); ?>
+            <?php endif; ?>
         });
+
+        // Modal functions
+        function openModal(modalId) {
+            const modal = document.getElementById(modalId);
+            const overlay = document.createElement('div');
+            overlay.id = 'modalOverlay';
+            overlay.className = 'fixed inset-0 bg-black bg-opacity-50 z-40';
+            document.body.appendChild(overlay);
+
+            modal.classList.remove('hidden');
+            const content = modal.querySelector('.bg-white');
+
+            setTimeout(() => {
+                content.classList.remove('scale-95', 'opacity-0');
+                content.classList.add('scale-100', 'opacity-100');
+            }, 10);
+
+            overlay.addEventListener('click', closeModal);
+        }
+
+        function closeModal() {
+            const modals = document.querySelectorAll('[id$="Modal"]');
+            const overlay = document.getElementById('modalOverlay');
+
+            modals.forEach(modal => {
+                const content = modal.querySelector('.bg-white');
+                if (content) {
+                    content.classList.remove('scale-100', 'opacity-100');
+                    content.classList.add('scale-95', 'opacity-0');
+                }
+
+                setTimeout(() => {
+                    modal.classList.add('hidden');
+                }, 300);
+            });
+
+            if (overlay) {
+                setTimeout(() => {
+                    overlay.remove();
+                }, 300);
+            }
+
+            // Reset forms and hide messages
+            document.getElementById('addLessonForm').reset();
+            document.getElementById('editLessonForm').reset();
+            document.getElementById('deleteLessonsButton').reset();
+            hideMessages();
+        }
+
+        function hideMessages() {
+            document.getElementById('errorMessage').classList.add('hidden');
+            document.getElementById('editErrorMessage').classList.add('hidden');
+        }
+
+        function showError(message, isEditForm = false) {
+            const errorDiv = isEditForm ? document.getElementById('editErrorMessage') : document.getElementById('errorMessage');
+            const errorText = isEditForm ? document.getElementById('editErrorText') : document.getElementById('errorText');
+
+            errorText.textContent = message;
+            errorDiv.classList.remove('hidden');
+        }
+
+        // Lesson-specific Functions
+        function addLessons() {
+            openModal('addLessonModal');
+        }
+
+        function editLesson(id) {
+            // Find the lesson data
+            const lesson = allLessons.find(item => item.id_pelajaran == id);
+
+            if (!lesson) {
+                alert('Data pelajaran tidak ditemukan');
+                return;
+            }
+
+            // Fill the edit form
+            document.getElementById('edit_id_pelajaran').value = lesson.id_pelajaran;
+            document.getElementById('edit_pelajaran').value = lesson.pelajaran;
+
+            // Open the modal
+            openModal('editLessonModal');
+        }
+
+        // Form Validations
+        document.getElementById('addLessonForm').addEventListener('submit', function(e) {
+            const pelajaran = document.getElementById('pelajaran').value.trim();
+
+            if (!pelajaran) {
+                e.preventDefault();
+                showError('Nama pelajaran tidak boleh kosong!');
+            }
+        });
+
+        document.getElementById('editLessonForm').addEventListener('submit', function(e) {
+            const pelajaran = document.getElementById('edit_pelajaran').value.trim();
+
+            if (!pelajaran) {
+                e.preventDefault();
+                showError('Nama pelajaran tidak boleh kosong!', true);
+            }
+        });
+
+        function deleteLesson(id) {
+            // Cari data pelajaran
+            const lesson = allLessons.find(item => item.id_pelajaran == id);
+
+            if (!lesson) {
+                alert('Data pelajaran tidak ditemukan');
+                return;
+            }
+
+            // Isi form delete
+            document.getElementById('delete_id_pelajaran').value = lesson.id_pelajaran;
+            document.getElementById('deleteLessonName').textContent = lesson.pelajaran;
+
+            // Tampilkan modal
+            openModal('deleteLessonModal');
+        }
+
+        function showSuccessNotification(message) {
+            const notification = document.getElementById('successNotification');
+            const messageElement = document.getElementById('successMessage');
+
+            messageElement.textContent = message;
+            notification.classList.remove('hidden');
+            notification.classList.add('animate-fade-in-up');
+            notification.classList.remove('animate-fade-out');
+
+            // Hide after 3 seconds
+            setTimeout(() => {
+                notification.classList.remove('animate-fade-in-up');
+                notification.classList.add('animate-fade-out');
+                setTimeout(() => {
+                    notification.classList.add('hidden');
+                }, 500);
+            }, 3000);
+        }
     </script>
 </body>
 
