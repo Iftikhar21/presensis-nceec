@@ -229,59 +229,13 @@ $countTutor = getAllCountTeachers();
                                     </th>
                                     <th class="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">ID Tutor</th>
                                     <th class="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">User ID</th>
+                                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">Foto Profil</th>
                                     <th class="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">Nama Tutor</th>
                                     <th class="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">Mata Pelajaran</th>
                                     <th class="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">Bergabung</th>
-                                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">Foto Profil</th>
-                                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody id="tableBody" class="bg-white divide-y divide-gray-200">
-                                <?php foreach ($teachers as $teacher): ?>
-                                    <tr class="hover:bg-gray-50 transition duration-150 text-center">
-                                        <td class="px-6 py-4 whitespace-nowrap">
-                                            <input type="checkbox" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-4 w-4">
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 text-center">
-                                            <?= htmlspecialchars($teacher['id_tutor'] ?? 'N/A') ?>
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 text-center">
-                                            <?= htmlspecialchars($teacher['user_id'] ?? 'N/A') ?>
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 text-center">
-                                            <?= htmlspecialchars($teacher['nama_tutor'] ?? 'N/A') ?>
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap">
-                                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 text-center">
-                                                <?= htmlspecialchars($teacher['pelajaran'] ?? 'N/A') ?>
-                                            </span>
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
-                                            <?= htmlspecialchars($teacher['bergabung'] ?? 'N/A') ?>
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap">
-                                            <div class="flex justify-center space-x-3">
-                                                <?php if (!empty($teacher['foto_profil'])): ?>
-                                                    <img src="<?= htmlspecialchars($teacher['foto_profil']) ?>" alt="Foto Profil" class="h-10 w-10 rounded-full object-cover border-2 border-gray-200">
-                                                <?php else: ?>
-                                                    <div class="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
-                                                        <span class="text-gray-400 text-xs">No Photo</span>
-                                                    </div>
-                                                <?php endif; ?>
-                                            </div>
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
-                                            <div class="flex justify-center space-x-3">
-                                                <button onclick="editTutor(<?= $teacher['id_tutor'] ?>)" class="text-blue-600 hover:text-blue-900 transition duration-150" title="Edit">
-                                                    <i class="fas fa-edit"></i>
-                                                </button>
-                                                <button onclick="deleteTutor(<?= $teacher['id_tutor'] ?>)" class="text-red-600 hover:text-red-900 transition duration-150" title="Hapus">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
                             </tbody>
                         </table>
                     </div>
@@ -390,17 +344,6 @@ $countTutor = getAllCountTeachers();
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 text-center">
                     ${teacher.user_id || 'N/A'}
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 text-center">
-                    ${teacher.nama_tutor || 'N/A'}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 text-center">
-                        ${teacher.pelajaran || 'N/A'}
-                    </span>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
-                    ${teacher.bergabung || 'N/A'}
-                </td>
                 <td class="px-6 py-4 whitespace-nowrap">
                     <div class="flex justify-center space-x-3">
                         ${teacher.foto_profil ? 
@@ -411,15 +354,16 @@ $countTutor = getAllCountTeachers();
                         }
                     </div>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
-                    <div class="flex justify-center space-x-3">
-                        <button onclick="editTutor(${teacher.id_tutor})" class="text-blue-600 hover:text-blue-900 transition duration-150" title="Edit">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button onclick="deleteTutor(${teacher.id_tutor})" class="text-red-600 hover:text-red-900 transition duration-150" title="Hapus">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 text-center">
+                    ${teacher.nama_tutor || 'N/A'}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 text-center">
+                        ${teacher.pelajaran || 'N/A'}
+                    </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                    ${teacher.bergabung || 'N/A'}
                 </td>
             </tr>
         `).join('');
