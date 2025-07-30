@@ -38,3 +38,47 @@ function getAllCountAbsentToday() {
 
     return $result['total_absen'];
 }
+function getWeeklyAttendanceForUser($userId) {
+    $conn = connectDatabase();
+    
+    // Get dates for the past 7 days including today
+    $dates = [];
+    for ($i = 6; $i >= 0; $i--) {
+        $dates[] = date('Y-m-d', strtotime("-$i days"));
+    }
+    
+    $weeklyData = [];
+    
+    foreach ($dates as $date) {
+        $query = "SELECT status, waktu, mood, keterangan 
+                  FROM absensi 
+                  WHERE tanggal = ? AND user_id = ?";
+        
+        $stmt = $conn->prepare($query);
+        $stmt->bind_param("si", $date, $userId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        $status = 'Tidak Hadir'; // Default
+        $waktu = null;
+        $mood = null;
+        $keterangan = null;
+        
+        if ($row = $result->fetch_assoc()) {
+            $status = $row['status'];
+            $waktu = $row['waktu'];
+            $mood = $row['mood'];
+            $keterangan = $row['keterangan'];
+        }
+        
+        $weeklyData[] = [
+            'date' => date('D, d M', strtotime($date)),
+            'status' => $status,
+            'waktu' => $waktu,
+            'mood' => $mood,
+            'keterangan' => $keterangan
+        ];
+    }
+    
+    return $weeklyData;
+}

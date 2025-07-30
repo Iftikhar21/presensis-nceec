@@ -1,14 +1,20 @@
 <?php
 // Tambahkan ini dulu
 ini_set('session.cookie_lifetime', 0); // session hilang saat browser ditutup
+ini_set('session.cookie_httponly', 1);
+ini_set('session.cookie_secure', 1);
+ini_set('session.use_strict_mode', 1);
 
 session_start();
 include '../../../includes/crud/crud-auth/crud-login.php';
 include '../../../includes/crud/crud-teacher/crud-teacher.php';
+include '../../../includes/crud/crud-material/crud-material.php';
+include '../../../includes/crud/crud-lessons/crud-lessons.php';
+include '../../../includes/crud/crud-presence/crud-presence.php';
 
 
 // Pengecekan session utama
-if (!isset($_SESSION['username']) && !isset($_SESSION['ID'])) {
+if (!isset($_SESSION['username']) || !isset($_SESSION['ID'])) {
     header("Location: ../../auth/form-login.php");
     exit();
 }
@@ -17,7 +23,7 @@ $id_user = $_SESSION['ID'];
 
 $data_teacher = getTeacherWhereId($id_user);
 if (!$data_teacher['status']) {
-    echo "<p>Error: " . $data_teacher['message'] . "</p>";
+    echo "<p>Error: " . htmlspecialchars($data_teacher['message']) . "</p>";
     exit();
 }
 
@@ -26,9 +32,17 @@ if (!isset($data_teacher['teacher']['username'])) {
     exit();
 }
 
-$username = $data_teacher['teacher']['username'];
-$email = $data_teacher['teacher']['email'];
-$role = ucfirst($data_teacher['teacher']['role']);
+$username = htmlspecialchars($data_teacher['teacher']['username']);
+$email = htmlspecialchars($data_teacher['teacher']['email']);
+$role = ucfirst(htmlspecialchars($data_teacher['teacher']['role']));
+
+// Get material data with error handling
+$all_materi = getAllMaterial();
+$materi_count = $all_materi['status'] ? count($all_materi['materi']) : 0;
+
+// Get lessons data with error handling
+$lessons_data = getAllLessons();
+$lessons_count = is_array($lessons_data) ? count($lessons_data) : 0;
 
 $title_page = "NCEEC";
 ?>
@@ -38,7 +52,7 @@ $title_page = "NCEEC";
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Teacher Dashboard - <?= $title_page; ?></title>
+    <title>Teacher Dashboard - <?= htmlspecialchars($title_page); ?></title>
     <link rel="icon" href="../../../assets/img/nceec-logo.jpg" type="image/x-icon">
     <link rel="stylesheet" href="../../../assets/css/index.css">
     <link rel="stylesheet" href="../../../assets/css/app.css">
@@ -68,7 +82,6 @@ $title_page = "NCEEC";
                     List Materi
                 </a>
 
-               
                 <div class="border-t border-gray-600 mt-6 pt-6">
                     <a href="#" onclick="logout()" class="menu-item flex items-center px-4 py-3 text-sm rounded-lg text-red-300 hover:text-red-200" id="menu-logout">
                         <i class="fa-solid fa-right-from-bracket text-lg mr-3"></i>
@@ -98,7 +111,7 @@ $title_page = "NCEEC";
                     <div class="relative">
                         <button id="user-menu-button" class="flex items-center space-x-2 focus:outline-none">
                             <i class="fa-solid fa-user mr-1 bg-gray-200 p-3 rounded-full hover:bg-gray-300 hover:transition ease-in duration-100 hover:shadow-md"></i>
-                            <span class="hidden md:inline-block"><?php echo "$username ($role)"; ?></span>
+                            <span class="hidden md:inline-block"><?= "$username ($role)"; ?></span>
                             <i class="fa-solid fa-chevron-down" id="user-menu-icon"></i>
                         </button>
                         <div id="user-menu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg">
@@ -133,30 +146,8 @@ $title_page = "NCEEC";
                         </div>
                     </div>
                 </div>
-                <script>
-                    function updateDateTime() {
-                        const now = new Date();
-                        const options = {
-                            weekday: 'long',
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric'
-                        };
 
-                        document.getElementById('current-time').textContent = now.toLocaleTimeString('id-ID', {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            second: '2-digit'
-                        });
-                        document.getElementById('current-date').textContent = now.toLocaleDateString('id-ID', options);
-                    }
-
-                    // Update setiap detik
-                    updateDateTime();
-                    setInterval(updateDateTime, 1000);
-                </script>
-               
-
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div class="content-card rounded-lg p-6 bg-white shadow-md animate-fade-in-up animate-delay-200 hover:shadow-lg transition-shadow duration-300">
                         <div class="flex items-center">
                             <div class="w-16 h-16 rounded-full flex items-center justify-center bg-green-200 mr-3">
@@ -164,21 +155,7 @@ $title_page = "NCEEC";
                             </div>
                             <div class="ml-4">
                                 <h3 class="text-base font-semibold mb-2">List Materi</h3>
-                                <h3 class="text-5xl font-semibold mb-2 text-green-600">36</h3>
-                                <p class="text-muted">Tersedia</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="content-card rounded-lg p-6 bg-white shadow-md animate-fade-in-up animate-delay-300 hover:shadow-lg transition-shadow duration-300">
-                        <div class="flex items-center">
-                            <div class="w-16 h-16 rounded-full flex items-center justify-center bg-yellow-200 mr-3">
-                                <i class="fa-solid fa-calendar text-2xl text-yellow-600"></i>
-                            </div>
-                            <div class="ml-4">
-                                <h3 class="text-base font-semibold mb-2">Jumlah Kelas</h3>
-                                <h3 class="text-5xl font-semibold mb-2 text-yellow-600">36</h3>
+                                <h3 class="text-5xl font-semibold mb-2 text-green-600"><?= $materi_count; ?></h3>
                                 <p class="text-muted">Tersedia</p>
                             </div>
                         </div>
@@ -191,16 +168,283 @@ $title_page = "NCEEC";
                             </div>
                             <div class="ml-4">
                                 <h3 class="text-base font-semibold mb-2">Jumlah Pelajaran</h3>
-                                <h3 class="text-5xl font-semibold mb-2 text-purple-600">36</h3>
+                                <h3 class="text-5xl font-semibold mb-2 text-purple-600"><?= $lessons_count; ?></h3>
                                 <p class="text-muted">Tersedia</p>
                             </div>
                         </div>
                     </div>
                 </div>
+                
+<!-- Attendance Chart Section -->
+<div class="content-card rounded-lg p-6 bg-white shadow-md animate-fade-in-up animate-delay-600 mt-4">
+    <h3 class="text-lg font-semibold mb-4">Riwayat Absensi 7 Hari Terakhir</h3>
+    <div class="chart-container" style="position: relative; height:350px; width:100%">
+        <canvas id="userAttendanceChart"></canvas>
+    </div>
+    <div class="mt-4 flex justify-center">
+        <div class="flex items-center mr-4">
+            <div class="w-3 h-3 rounded-full bg-green-500 mr-2"></div>
+            <span class="text-sm">Hadir</span>
+        </div>
+        <div class="flex items-center mr-4">
+            <div class="w-3 h-3 rounded-full bg-yellow-400 mr-2"></div>
+            <span class="text-sm">Izin</span>
+        </div>
+        <div class="flex items-center">
+            <div class="w-3 h-3 rounded-full bg-red-500 mr-2"></div>
+            <span class="text-sm">Tidak Hadir</span>
+        </div>
+    </div>
+</div>
+
             </div>
         </main>
     </div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<?php 
+$userId = $_SESSION['ID'];
+$userAttendance = getWeeklyAttendanceForUser($userId);
+$labels = array_column($userAttendance, 'date');
+$statusData = array_column($userAttendance, 'status');
+$waktuData = array_column($userAttendance, 'waktu');
+$moodData = array_column($userAttendance, 'mood');
+$keteranganData = array_column($userAttendance, 'keterangan');
 
+// Prepare data for chart
+$chartData = [];
+$pointDetails = [];
+$backgroundColors = [];
+
+foreach ($statusData as $index => $status) {
+    switch($status) {
+        case 'Hadir': 
+            $chartData[] = 2;
+            $backgroundColors[] = 'rgba(75, 192, 192, 0.2)';
+            $pointDetails[] = [
+                'waktu' => $waktuData[$index],
+                'mood' => $moodData[$index],
+                'keterangan' => $keteranganData[$index]
+            ];
+            break;
+        case 'Izin': 
+            $chartData[] = 1;
+            $backgroundColors[] = 'rgba(255, 206, 86, 0.2)';
+            $pointDetails[] = [
+                'waktu' => null,
+                'mood' => null,
+                'keterangan' => null
+            ];
+            break;
+        case 'Tidak Hadir':
+        default: 
+            $chartData[] = 0;
+            $backgroundColors[] = 'rgba(255, 99, 132, 0.2)';
+            $pointDetails[] = [
+                'waktu' => null,
+                'mood' => null,
+                'keterangan' => null
+            ];
+    }
+}
+?>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('userAttendanceChart').getContext('2d');
+    
+    // Status colors
+    const statusColors = {
+        0: 'rgba(255, 99, 132, 1)',    // Tidak Hadir - Merah
+        1: 'rgba(255, 206, 86, 1)',     // Izin - Kuning
+        2: 'rgba(75, 192, 192, 1)'      // Hadir - Hijau
+    };
+    
+    // Mood icons
+    const moodIcons = {
+        'senang': '😊',
+        'biasa': '😐',
+        'sedih': '😢',
+        'lelah': '😫',
+        'semangat': '💪'
+    };
+    
+    const userAttendanceChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: <?php echo json_encode($labels); ?>,
+            datasets: [{
+                label: 'Status Absensi',
+                data: <?php echo json_encode($chartData); ?>,
+                backgroundColor: <?php echo json_encode($backgroundColors); ?>,
+                borderColor: 'rgba(54, 162, 235, 0.8)',
+                borderWidth: 2,
+                pointBackgroundColor: function(context) {
+                    return statusColors[context.dataset.data[context.dataIndex]];
+                },
+                pointBorderColor: '#fff',
+                pointHoverRadius: 8,
+                pointRadius: 6,
+                pointHitRadius: 12,
+                fill: 'origin',
+                tension: 0.3
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 2,
+                    min: 0,
+                    ticks: {
+                        stepSize: 1,
+                        callback: function(value) {
+                            const labels = {
+                                0: 'Tidak Hadir',
+                                1: 'Izin',
+                                2: 'Hadir'
+                            };
+                            return labels[value];
+                        },
+                        font: {
+                            weight: 'bold',
+                            size: 12
+                        }
+                    },
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)',
+                        lineWidth: 1,
+                        drawBorder: false
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false,
+                        drawBorder: false
+                    },
+                    ticks: {
+                        font: {
+                            weight: 'bold',
+                            size: 12
+                        }
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        beforeTitle: function(context) {
+                            return `Tanggal: ${context[0].label}`;
+                        },
+                        label: function(context) {
+                            const labels = {
+                                0: 'Tidak Hadir',
+                                1: 'Izin',
+                                2: 'Hadir'
+                            };
+                            const index = context.dataIndex;
+                            const details = <?php echo json_encode($pointDetails); ?>[index];
+                            let tooltip = [];
+                            
+                            tooltip.push(`Status: ${labels[context.raw]}`);
+                            
+                            if (context.raw === 2) {
+                                tooltip.push(`Waktu: ${details.waktu || '-'}`);
+                                tooltip.push(`Mood: ${details.mood ? moodIcons[details.mood] + ' ' + details.mood : '-'}`);
+                                if (details.keterangan) {
+                                    tooltip.push(`Keterangan: ${details.keterangan}`);
+                                }
+                            }
+                            
+                            return tooltip;
+                        },
+                        labelColor: function(context) {
+                            return {
+                                borderColor: 'transparent',
+                                backgroundColor: statusColors[context.raw],
+                                borderRadius: 4
+                            };
+                        }
+                    },
+                    displayColors: false,
+                    backgroundColor: '#fff',
+                    titleColor: '#333',
+                    bodyColor: '#333',
+                    borderColor: '#eee',
+                    borderWidth: 1,
+                    padding: 12,
+                    cornerRadius: 6,
+                    bodyFont: {
+                        weight: 'bold'
+                    },
+                    footerFont: {
+                        style: 'italic',
+                        size: 11
+                    }
+                },
+                legend: {
+                    display: false
+                }
+            },
+            onClick: function(evt, elements) {
+                if (elements.length > 0) {
+                    const index = elements[0].index;
+                    const status = <?php echo json_encode($statusData); ?>[index];
+                    if (status === 'Hadir') {
+                        const details = <?php echo json_encode($pointDetails); ?>[index];
+                        // Show detailed modal
+                        showAttendanceDetail(
+                            <?php echo json_encode($labels); ?>[index],
+                            status,
+                            details.waktu,
+                            details.mood,
+                            details.keterangan
+                        );
+                    }
+                }
+            }
+        }
+    });
+
+    function showAttendanceDetail(date, status, waktu, mood, keterangan) {
+        const modal = document.createElement('div');
+        modal.id = 'attendance-detail-modal';
+        modal.innerHTML = `
+            <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div class="bg-white rounded-lg p-6 w-96">
+                    <h2 class="text-lg font-semibold mb-4">Detail Absensi - ${date}</h2>
+                    <div class="space-y-3">
+                        <div class="flex">
+                            <span class="font-medium w-24">Status:</span>
+                            <span>${status}</span>
+                        </div>
+                        <div class="flex">
+                            <span class="font-medium w-24">Waktu:</span>
+                            <span>${waktu || '-'}</span>
+                        </div>
+                        <div class="flex">
+                            <span class="font-medium w-24">Mood:</span>
+                            <span>${mood ? moodIcons[mood] + ' ' + mood : '-'}</span>
+                        </div>
+                        <div class="flex">
+                            <span class="font-medium w-24">Keterangan:</span>
+                            <span>${keterangan || '-'}</span>
+                        </div>
+                    </div>
+                    <div class="mt-6 flex justify-end">
+                        <button id="close-detail-modal" class="px-4 py-2 bg-blue-500 text-white rounded">Tutup</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        document.getElementById('close-detail-modal').addEventListener('click', () => {
+            modal.remove();
+        });
+    }
+});
+</script>
     <script>
         let currentPage = 'Dashboard';
 
@@ -218,19 +462,14 @@ $title_page = "NCEEC";
         }
 
         function setActivePage(pageName) {
-            // Update current page
             currentPage = pageName;
-
-            // Update page title
             document.getElementById('page-title').textContent = pageName;
 
-            // Update content
             const contentTitle = document.getElementById('content-title');
             const contentDescription = document.getElementById('content-description');
 
             contentTitle.textContent = `Ini halaman ${pageName}`;
 
-            // Set description based on page
             const descriptions = {
                 'Dashboard': 'Selamat datang di panel administrasi. Pilih menu di sidebar untuk navigasi ke halaman yang diinginkan.',
                 'List Materi': 'Halaman untuk mengelola daftar materi pembelajaran. Anda dapat menambah, mengedit, atau menghapus materi di sini.',
@@ -240,7 +479,6 @@ $title_page = "NCEEC";
 
             contentDescription.textContent = descriptions[pageName] || `Konten untuk halaman ${pageName}`;
 
-            // Update active menu
             const menuItems = document.querySelectorAll('.menu-item');
             menuItems.forEach(item => item.classList.remove('active'));
 
@@ -255,10 +493,26 @@ $title_page = "NCEEC";
                 document.getElementById(menuMap[pageName]).classList.add('active');
             }
 
-            // Close sidebar on mobile after selection
             if (window.innerWidth < 1024) {
                 toggleSidebar();
             }
+        }
+
+        function updateDateTime() {
+            const now = new Date();
+            const options = {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            };
+
+            document.getElementById('current-time').textContent = now.toLocaleTimeString('id-ID', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            document.getElementById('current-date').textContent = now.toLocaleDateString('id-ID', options);
         }
 
         function logout() {
@@ -287,7 +541,10 @@ $title_page = "NCEEC";
             });
         }
 
-        // Close sidebar when clicking outside on mobile
+        // Initialize
+        updateDateTime();
+        setInterval(updateDateTime, 1000);
+
         document.addEventListener('click', function(event) {
             const sidebar = document.getElementById('sidebar');
             const hamburger = event.target.closest('button[onclick="toggleSidebar()"]');
@@ -299,7 +556,6 @@ $title_page = "NCEEC";
             }
         });
 
-        // Handle window resize
         window.addEventListener('resize', function() {
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('overlay');
@@ -318,7 +574,6 @@ $title_page = "NCEEC";
         const userMenuIcon = document.getElementById('user-menu-icon');
 
         userMenuButton.addEventListener('click', () => {
-            // Toggle rotasi antara 0 dan 180 derajat dengan transition
             const currentRotation = userMenu.classList.contains('hidden') ? 180 : 0;
             userMenuIcon.style.transform = `rotate(${currentRotation}deg)`;
             userMenuIcon.style.transition = 'transform 0.3s ease';
@@ -327,17 +582,11 @@ $title_page = "NCEEC";
 
         document.addEventListener('click', (event) => {
             if (!userMenuButton.contains(event.target) && !userMenu.contains(event.target)) {
-                // Kembalikan rotasi ke 0 derajat saat menutup menu dengan transition
                 userMenuIcon.style.transform = 'rotate(0deg)';
                 userMenu.classList.add('hidden');
             }
         });
     </script>
-    <style>
-
-    </style>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindplus/elements@1" type="module"></script>
 
     <!-- Footer -->
     <footer class="bg-white shadow-md lg:ml-64 mt-auto bottom-0">
