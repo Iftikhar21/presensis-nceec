@@ -93,7 +93,7 @@ $title_page = "NCEEC";
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>List Materi - <?= $title_page; ?></title>
+    <title>List Materi - <?= htmlspecialchars($title_page); ?></title>
     <link rel="icon" href="../../../assets/img/nceec-logo.jpg" type="image/x-icon">
     <link rel="stylesheet" href="../../../assets/css/index.css">
     <link rel="stylesheet" href="../../../assets/css/app.css">
@@ -101,126 +101,6 @@ $title_page = "NCEEC";
     <link rel="stylesheet" href="../../../assets/css/dashboard.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        .animate-fade-in-down {
-            animation: fadeInDown 0.5s ease-out;
-        }
-
-        @keyframes fadeInDown {
-            from {
-                opacity: 0;
-                transform: translateY(-20px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .sidebar-transition {
-            transition: transform 0.3s ease-in-out;
-        }
-
-        .btn-hover:hover {
-            background-color: rgba(59, 130, 246, 0.1);
-        }
-
-        .btn-focus:focus {
-            outline: 2px solid rgb(59, 130, 246);
-            outline-offset: 2px;
-        }
-
-        .menu-item {
-            transition: all 0.2s ease-in-out;
-        }
-
-        .menu-item:hover {
-            background-color: rgba(255, 255, 255, 0.1);
-            transform: translateX(4px);
-        }
-
-        .menu-item.active {
-            background-color: rgba(59, 130, 246, 0.2);
-            border-right: 3px solid rgb(59, 130, 246);
-        }
-
-        .content-card {
-            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-        }
-
-        .content-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-        }
-
-        .rotate-180 {
-            transform: rotate(180deg);
-        }
-
-        /* Custom scrollbar */
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 3px;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: #c1c1c1;
-            border-radius: 3px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: #a8a8a8;
-        }
-
-        /* Responsive table */
-        @media (max-width: 768px) {
-            .table-responsive {
-                font-size: 14px;
-            }
-
-            .table-responsive th,
-            .table-responsive td {
-                padding: 8px 4px;
-            }
-        }
-
-        /* Loading spinner */
-        .fa-spinner {
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            from {
-                transform: rotate(0deg);
-            }
-
-            to {
-                transform: rotate(360deg);
-            }
-        }
-
-        /* Form validation styles */
-        .form-error {
-            border-color: #ef4444;
-            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
-        }
-
-        .form-success {
-            border-color: #10b981;
-            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
-        }
-
-        /* Modal styling */
-        .modal-backdrop {
-            backdrop-filter: blur(5px);
-        }
-    </style>
 </head>
 
 <body class="bg-primary text-primary min-h-screen flex flex-col">
@@ -238,12 +118,12 @@ $title_page = "NCEEC";
                     Dashboard
                 </a>
 
-                <a href="../list-materi/material-list.php" onclick="setActivePage('List Materi')" class="menu-item active flex items-center px-4 py-3 text-sm rounded-lg" id="menu-materi">
+                 <a href="../list-materi/material-list.php" onclick="setActivePage('List Materi')" class="menu-item active flex items-center px-4 py-3 text-sm rounded-lg" id="menu-materi">
                     <i class="fa-solid fa-list-check text-lg mr-3"></i>
                     List Materi
                 </a>
 
-                <div class="border-t border-gray-600 mt-6 pt-6">
+                 <div class="border-t border-gray-600 mt-6 pt-6">
                     <a href="#" onclick="logout()" class="menu-item flex items-center px-4 py-3 text-sm rounded-lg text-red-300 hover:text-red-200" id="menu-logout">
                         <i class="fa-solid fa-right-from-bracket text-lg mr-3"></i>
                         Logout
@@ -276,7 +156,7 @@ $title_page = "NCEEC";
                             <i class="fa-solid fa-chevron-down" id="user-menu-icon"></i>
                         </button>
                         <div id="user-menu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg">
-                            <a href="../../auth/profile.php" class="block px-6 py-4 text-sm text-gray-700 hover:bg-gray-100">
+                            <a href="../../auth/teacher/profile.php" class="block px-6 py-4 text-sm text-gray-700 hover:bg-gray-100">
                                 <i class="fa-solid fa-user mr-3 text-blue-700"></i>
                                 Profile
                             </a>
@@ -475,7 +355,8 @@ $title_page = "NCEEC";
             </div>
         </div>
     </div>
-
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.js"></script>
+    <script src="../../../assets/js/sidebar.js"></script>
     <script>
         // Global variables
         let materialsData = [];
@@ -906,56 +787,48 @@ $title_page = "NCEEC";
             }
         });
 
-        // User menu functionality
-        document.getElementById('user-menu-button').addEventListener('click', function() {
-            const menu = document.getElementById('user-menu');
-            const icon = document.getElementById('user-menu-icon');
-            menu.classList.toggle('hidden');
-            icon.classList.toggle('rotate-180');
-        });
+        document.addEventListener('click', function(event) {
+            const sidebar = document.getElementById('sidebar');
+            const hamburger = event.target.closest('button[onclick="toggleSidebar()"]');
 
-        // Close user menu when clicking outside
-        document.addEventListener('click', function(e) {
-            const button = document.getElementById('user-menu-button');
-            const menu = document.getElementById('user-menu');
-            const icon = document.getElementById('user-menu-icon');
-
-            if (!button.contains(e.target) && !menu.contains(e.target)) {
-                menu.classList.add('hidden');
-                icon.classList.remove('rotate-180');
+            if (!sidebar.contains(event.target) && !hamburger && window.innerWidth < 1024) {
+                if (!sidebar.classList.contains('-translate-x-full')) {
+                    toggleSidebar();
+                }
             }
         });
 
-        // Sidebar functionality
-        function toggleSidebar() {
+        window.addEventListener('resize', function() {
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('overlay');
 
-            sidebar.classList.toggle('-translate-x-full');
-            overlay.classList.toggle('hidden');
-        }
-
-        function setActivePage(pageName) {
-            document.getElementById('page-title').textContent = pageName;
-
-            // Update active menu item
-            document.querySelectorAll('.menu-item').forEach(item => {
-                item.classList.remove('active');
-            });
-
-            if (pageName === 'List Materi') {
-                document.getElementById('menu-materi').classList.add('active');
-            } else if (pageName === 'Dashboard') {
-                document.getElementById('menu-dashboard').classList.add('active');
+            if (window.innerWidth >= 1024) {
+                sidebar.classList.remove('-translate-x-full');
+                overlay.classList.add('hidden');
+            } else {
+                sidebar.classList.add('-translate-x-full');
+                overlay.classList.add('hidden');
             }
-        }
+        });
 
-        function logout() {
-            if (confirm('Apakah Anda yakin ingin logout?')) {
-                window.location.href = '../../../pages/auth/logout.php';
+        const userMenuButton = document.getElementById('user-menu-button');
+        const userMenu = document.getElementById('user-menu');
+        const userMenuIcon = document.getElementById('user-menu-icon');
+
+        userMenuButton.addEventListener('click', () => {
+            const currentRotation = userMenu.classList.contains('hidden') ? 180 : 0;
+            userMenuIcon.style.transform = `rotate(${currentRotation}deg)`;
+            userMenuIcon.style.transition = 'transform 0.3s ease';
+            userMenu.classList.toggle('hidden');
+        });
+
+        document.addEventListener('click', (event) => {
+            if (!userMenuButton.contains(event.target) && !userMenu.contains(event.target)) {
+                userMenuIcon.style.transform = 'rotate(0deg)';
+                userMenu.classList.add('hidden');
             }
-        }
-
+        });
+       
         // Close modals when clicking outside
         document.getElementById('material-modal').addEventListener('click', function(e) {
             if (e.target === this) {
