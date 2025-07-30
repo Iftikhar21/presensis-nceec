@@ -11,38 +11,20 @@ require_once(__DIR__ . '/../../../config.php');
 function getAllTeachers()
 {
     $conn = connectDatabase();
-    if (!$conn) {
-        return ['status' => false, 'message' => 'Database connection failed', 'teachers' => []];
-    }
-
-    $query = "SELECT t.*, p.pelajaran, u.username, u.email 
-              FROM tutor t 
-              INNER JOIN pelajaran p ON t.id_pelajaran = p.id_pelajaran
-              INNER JOIN users u ON t.user_id = u.id
-              ORDER BY t.created_at DESC";
-    
+    $query = "SELECT * FROM tutor INNER JOIN pelajaran ON tutor.id_pelajaran = pelajaran.id_pelajaran";
     $result = mysqli_query($conn, $query);
 
     if (!$result) {
-        return [
-            'status' => false, 
-            'message' => 'Error fetching teachers: ' . mysqli_error($conn),
-            'teachers' => []
-        ];
+        return [];
     }
 
     $tutorList = [];
     while ($row = mysqli_fetch_assoc($result)) {
         $tutorList[] = $row;
     }
-    
-    mysqli_close($conn);
-    return [
-        'status' => true,
-        'message' => 'Teachers fetched successfully',
-        'teachers' => $tutorList
-    ];
+    return $tutorList;
 }
+
 
 /**
  * Get teacher data by user ID
@@ -50,30 +32,10 @@ function getAllTeachers()
 function getTeacherWhereId($id)
 {
     $conn = connectDatabase();
-    if (!$conn) {
-        return [
-            "status" => false,
-            "message" => "Database connection failed"
-        ];
-    }
-
-    // Use prepared statement for security
-    $stmt = mysqli_prepare($conn, "SELECT * FROM users WHERE id = ? AND role = 'teacher'");
-    if (!$stmt) {
-        mysqli_close($conn);
-        return [
-            "status" => false,
-            "message" => "Error preparing statement: " . mysqli_error($conn)
-        ];
-    }
-
-    mysqli_stmt_bind_param($stmt, "i", $id);
-    mysqli_stmt_execute($stmt);
-    $result = mysqli_stmt_get_result($stmt);
+    $query = "SELECT * FROM users WHERE id = '$id' AND role = 'teacher'";
+    $result = mysqli_query($conn, $query);
 
     if (!$result) {
-        mysqli_stmt_close($stmt);
-        mysqli_close($conn);
         return [
             "status" => false,
             "message" => "Error fetching teacher: " . mysqli_error($conn)
@@ -81,21 +43,13 @@ function getTeacherWhereId($id)
     }
 
     $teacher = mysqli_fetch_assoc($result);
-    mysqli_stmt_close($stmt);
-    mysqli_close($conn);
-
-    if (!$teacher) {
-        return [
-            "status" => false,
-            "message" => "Teacher not found"
-        ];
-    }
 
     return [
         "status" => true,
         "teacher" => $teacher
     ];
 }
+
 
 /**
  * Get tutor data by user ID
@@ -183,20 +137,14 @@ function getTutorById($id_tutor)
 function getAllCountTeachers()
 {
     $conn = connectDatabase();
-    if (!$conn) {
-        return 0;
-    }
-
     $query = "SELECT COUNT(*) as count FROM users WHERE role = 'teacher'";
     $result = mysqli_query($conn, $query);
 
     if (!$result) {
-        mysqli_close($conn);
         return 0;
     }
 
     $row = mysqli_fetch_assoc($result);
-    mysqli_close($conn);
     return (int)$row['count'];
 }
 
