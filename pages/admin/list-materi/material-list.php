@@ -100,91 +100,6 @@ $tutor_list = getAllTeachers();
     <link rel="stylesheet" href="../../../assets/css/dashboard.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        .lesson-card {
-            transition: all 0.3s ease;
-        }
-
-        .lesson-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-        }
-
-        .active-lesson {
-            border-left: 4px solid #3B82F6;
-            background-color: #EFF6FF;
-        }
-
-        .animate-fade-in-down {
-            animation: fadeInDown 0.5s ease-out;
-        }
-
-        @keyframes fadeInDown {
-            from {
-                opacity: 0;
-                transform: translateY(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .sidebar-transition {
-            transition: transform 0.3s ease-in-out;
-        }
-
-        .btn-hover:hover {
-            background-color: rgba(59, 130, 246, 0.1);
-        }
-
-        .btn-focus:focus {
-            outline: 2px solid rgb(59, 130, 246);
-            outline-offset: 2px;
-        }
-
-        .menu-item {
-            transition: all 0.2s ease-in-out;
-        }
-
-        .menu-item:hover {
-            background-color: rgba(255, 255, 255, 0.1);
-            transform: translateX(4px);
-        }
-
-        .menu-item.active {
-            background-color: rgba(59, 130, 246, 0.2);
-            border-right: 3px solid rgb(59, 130, 246);
-        }
-
-        .content-card {
-            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-        }
-
-        .content-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-        }
-
-        .rotate-180 {
-            transform: rotate(180deg);
-        }
-
-        /* Loading spinner */
-        .fa-spinner {
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-
-        /* Modal styling */
-        .modal-backdrop {
-            backdrop-filter: blur(5px);
-        }
-    </style>
 </head>
 
 <body class="bg-primary text-primary min-h-screen flex flex-col">
@@ -256,7 +171,7 @@ $tutor_list = getAllTeachers();
                             <i class="fa-solid fa-chevron-down" id="user-menu-icon"></i>
                         </button>
                         <div id="user-menu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg">
-                            <a href="../../auth/profile.php" class="block px-6 py-4 text-sm text-gray-700 hover:bg-gray-100">
+                            <a href="../../auth/admin/profile.php" class="block px-6 py-4 text-sm text-gray-700 hover:bg-gray-100">
                                 <i class="fa-solid fa-user mr-3 text-blue-700"></i>
                                 Profile
                             </a>
@@ -979,56 +894,6 @@ $tutor_list = getAllTeachers();
                 showNotification('Terjadi kesalahan saat memproses data', 'error');
             }
         });
-
-        // User menu functionality
-        document.getElementById('user-menu-button').addEventListener('click', function() {
-            const menu = document.getElementById('user-menu');
-            const icon = document.getElementById('user-menu-icon');
-            menu.classList.toggle('hidden');
-            icon.classList.toggle('rotate-180');
-        });
-
-        // Close user menu when clicking outside
-        document.addEventListener('click', function(e) {
-            const button = document.getElementById('user-menu-button');
-            const menu = document.getElementById('user-menu');
-            const icon = document.getElementById('user-menu-icon');
-
-            if (!button.contains(e.target) && !menu.contains(e.target)) {
-                menu.classList.add('hidden');
-                icon.classList.remove('rotate-180');
-            }
-        });
-
-        // Sidebar functionality
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('overlay');
-
-            sidebar.classList.toggle('-translate-x-full');
-            overlay.classList.toggle('hidden');
-        }
-
-        function setActivePage(pageName) {
-            document.getElementById('page-title').textContent = pageName;
-
-            // Update active menu item
-            document.querySelectorAll('.menu-item').forEach(item => {
-                item.classList.remove('active');
-            });
-
-            if (pageName === 'List Materi') {
-                document.getElementById('menu-materi').classList.add('active');
-            } else if (pageName === 'Dashboard') {
-                document.getElementById('menu-dashboard').classList.add('active');
-            }
-        }
-
-        function logout() {
-            if (confirm('Apakah Anda yakin ingin logout?')) {
-                window.location.href = '../../../pages/auth/logout.php';
-            }
-        }
 
         // Close modals when clicking outside
         document.getElementById('material-modal').addEventListener('click', function(e) {
