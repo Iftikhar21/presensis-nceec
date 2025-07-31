@@ -100,91 +100,7 @@ $tutor_list = getAllTeachers();
     <link rel="stylesheet" href="../../../assets/css/dashboard.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        .lesson-card {
-            transition: all 0.3s ease;
-        }
-
-        .lesson-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-        }
-
-        .active-lesson {
-            border-left: 4px solid #3B82F6;
-            background-color: #EFF6FF;
-        }
-
-        .animate-fade-in-down {
-            animation: fadeInDown 0.5s ease-out;
-        }
-
-        @keyframes fadeInDown {
-            from {
-                opacity: 0;
-                transform: translateY(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .sidebar-transition {
-            transition: transform 0.3s ease-in-out;
-        }
-
-        .btn-hover:hover {
-            background-color: rgba(59, 130, 246, 0.1);
-        }
-
-        .btn-focus:focus {
-            outline: 2px solid rgb(59, 130, 246);
-            outline-offset: 2px;
-        }
-
-        .menu-item {
-            transition: all 0.2s ease-in-out;
-        }
-
-        .menu-item:hover {
-            background-color: rgba(255, 255, 255, 0.1);
-            transform: translateX(4px);
-        }
-
-        .menu-item.active {
-            background-color: rgba(59, 130, 246, 0.2);
-            border-right: 3px solid rgb(59, 130, 246);
-        }
-
-        .content-card {
-            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-        }
-
-        .content-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-        }
-
-        .rotate-180 {
-            transform: rotate(180deg);
-        }
-
-        /* Loading spinner */
-        .fa-spinner {
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-
-        /* Modal styling */
-        .modal-backdrop {
-            backdrop-filter: blur(5px);
-        }
-    </style>
+  
 </head>
 
 <body class="bg-primary text-primary min-h-screen flex flex-col">
@@ -980,26 +896,7 @@ $tutor_list = getAllTeachers();
             }
         });
 
-        // User menu functionality
-        document.getElementById('user-menu-button').addEventListener('click', function() {
-            const menu = document.getElementById('user-menu');
-            const icon = document.getElementById('user-menu-icon');
-            menu.classList.toggle('hidden');
-            icon.classList.toggle('rotate-180');
-        });
-
-        // Close user menu when clicking outside
-        document.addEventListener('click', function(e) {
-            const button = document.getElementById('user-menu-button');
-            const menu = document.getElementById('user-menu');
-            const icon = document.getElementById('user-menu-icon');
-
-            if (!button.contains(e.target) && !menu.contains(e.target)) {
-                menu.classList.add('hidden');
-                icon.classList.remove('rotate-180');
-            }
-        });
-
+       
         // Sidebar functionality
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
