@@ -5,6 +5,7 @@ ini_set('session.cookie_lifetime', 0); // session hilang saat browser ditutup
 session_start();
 include '../../../includes/crud/crud-auth/crud-login.php';
 include '../../../includes/crud/crud-admin/crud-admin.php';
+include '../../../includes/crud/crud-presence/crud-presence.php';
 
 
 // Pengecekan session utama
@@ -31,6 +32,20 @@ $email = $data_admin['admin']['email'];
 $role = ucfirst($data_admin['admin']['role']);
 
 $title_page = "NCEEC";
+
+$data_absent_today = getAbsentWhereToday();
+$countAbsentToday = getAllCountAbsentToday();
+
+// Handle AJAX request for date filtering
+if (isset($_GET['action'])) {
+    if ($_GET['action'] === 'get_by_date' && isset($_GET['date'])) {
+        $date = $_GET['date'];
+        $response = getAllAbsentWhereSelectedDate($date); // Gunakan fungsi yang baru
+        header('Content-Type: application/json');
+        echo json_encode($response);
+        exit();
+    }
+}
 ?>
 
 
@@ -48,6 +63,7 @@ $title_page = "NCEEC";
     <link rel="stylesheet" href="../../../assets/css/dashboard.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 </head>
 
 <body class="bg-primary text-primary min-h-screen flex flex-col">
@@ -135,92 +151,166 @@ $title_page = "NCEEC";
 
         <!-- Content Area -->
         <main class="p-6 flex-grow">
-            <div class="max-w-7xl mx-auto">
-                <div class="content-card rounded-lg p-6 bg-white shadow-md mb-4 overflow-hidden relative animate-fade-in-down">
-                    <div class="absolute -right-10 -bottom-10 w-32 h-32 rounded-full bg-blue-100 opacity-50"></div>
-                    <div class="flex items-center justify-between relative z-5">
+            <div class="content-card rounded-lg p-6 bg-white shadow-md mb-4 overflow-hidden relative animate-fade-in-down">
+                <div class="absolute -right-10 -bottom-10 w-32 h-32 rounded-full bg-blue-100 opacity-50"></div>
+                <div class="flex items-center justify-between relative z-5">
+                    <div>
+                        <h3 class="text-xl md:text-2xl font-semibold mb-1">Lihat Data Absen Tutor</h3>
+                        <p class="text-xs md:text-sm text-muted">Lihat Tutor yang Sudah Absen</p>
+                    </div>
+                    <div class="text-right">
+                        <h3 class="text-xl md:text-3xl font-bold text-blue-600 mb-1"><?= $countAbsentToday; ?></h3>
+                        <p class="text-xs md:text-sm text-muted">Tutor yang Sudah Absen</p>
+                    </div>
+                </div>
+            </div>
+            <div class="content-card rounded-lg p-6 bg-white shadow-md mb-4 overflow-hidden relative animate-fade-in-down">
+                <!-- Header -->
+                <div class="border-b border-gray-200 pb-4 mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800">Data Absen Tutor</h2>
+                </div>
+
+                <!-- Filter Section -->
+                <!-- Filter Section -->
+                <div class="p-6 mb-6 border border-gray-200 rounded-lg bg-gray-50">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                        <!-- Filter Nama -->
                         <div>
-                            <h3 class="text-xl md:text-2xl font-semibold mb-1">Selamat Datang, <?= $username ?>!</h3>
-                            <p class="text-xs md:text-sm text-muted">Semoga harimu menyenangkan</p>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Nama Tutor</label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <svg class="h-5 w-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"></path>
+                                    </svg>
+                                </div>
+                                <input
+                                    type="text"
+                                    id="filterNama"
+                                    placeholder="Cari nama tutor..."
+                                    class="pl-10 w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-150">
+                            </div>
                         </div>
-                        <div class="text-right">
-                            <div id="current-time" class="text-2xl md:text-3xl font-bold text-blue-600"></div>
-                            <div id="current-date" class="text-xs md:text-sm text-gray-500"></div>
+
+                        <!-- Filter Tanggal -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Tanggal</label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <i class="fa-solid fa-calendar text-gray-400"></i>
+                                </div>
+                                <input
+                                    type="text"
+                                    id="filterTanggal"
+                                    placeholder="Pilih tanggal..."
+                                    class="pl-10 w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-150">
+                            </div>
+                        </div>
+
+                        <!-- Filter Status -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                            <select
+                                id="filterStatus"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-150">
+                                <option value="">Semua Status</option>
+                                <option value="Hadir">Hadir</option>
+                                <option value="Terlambat">Terlambat</option>
+                                <option value="Izin">Izin</option>
+                                <option value="Sakit">Sakit</option>
+                                <option value="Alpa">Alpa</option>
+                            </select>
+                        </div>
+
+                        <!-- Filter Mood -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Mood</label>
+                            <select
+                                id="filterMood"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-150">
+                                <option value="">Semua Mood</option>
+                                <option value="Happy">Baik</option>
+                                <option value="Normal">Biasa Aja</option>
+                                <option value="Bad">Buruk</option>
+                            </select>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="flex items-end space-x-3 md:col-span-2">
+                            <button
+                                onclick="resetFilters()"
+                                class="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-150 flex items-center justify-center">
+                                <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                </svg>
+                                Reset
+                            </button>
+                            <button
+                                onclick="applyFilters()"
+                                class="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-150 flex items-center justify-center">
+                                <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                                </svg>
+                                Terapkan
+                            </button>
                         </div>
                     </div>
                 </div>
-                <script>
-                    function updateDateTime() {
-                        const now = new Date();
-                        const options = {
-                            weekday: 'long',
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric'
-                        };
 
-                        document.getElementById('current-time').textContent = now.toLocaleTimeString('id-ID', {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            second: '2-digit'
-                        });
-                        document.getElementById('current-date').textContent = now.toLocaleDateString('id-ID', options);
-                    }
-
-                    // Update setiap detik
-                    updateDateTime();
-                    setInterval(updateDateTime, 1000);
-                </script>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-5">
-                    <div class="content-card rounded-lg p-6 bg-white shadow-md animate-fade-in-up animate-delay-100 hover:shadow-lg transition-shadow duration-300">
-                        <div class="flex items-center">
-                            <div class="w-16 h-16 rounded-full flex items-center justify-center bg-blue-200 mr-3">
-                                <i class="fa-solid fa-users text-2xl text-blue-600"></i>
-                            </div>
-                            <div class="ml-4">
-                                <h3 class="text-base font-semibold mb-2">Jumlah Tutor</h3>
-                                <h3 class="text-5xl font-semibold mb-2 text-blue-600">36</h3>
-                                <p class="text-muted">Terdaftar</p>
-                            </div>
-                        </div>
+                <!-- Table Container -->
+                <div class="border border-gray-200 rounded-lg overflow-hidden">
+                    <!-- Table -->
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-100">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider w-10">
+                                        <input type="checkbox" id="selectAll" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-4 w-4">
+                                    </th>
+                                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">Nama Tutor</th>
+                                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">Tanggal</th>
+                                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">Waktu</th>
+                                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">Status</th>
+                                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">Mood</th>
+                                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">Keterangan</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tableBody" class="bg-white divide-y divide-gray-200">
+                            </tbody>
+                        </table>
                     </div>
 
-                    <div class="content-card rounded-lg p-6 bg-white shadow-md animate-fade-in-up animate-delay-200 hover:shadow-lg transition-shadow duration-300">
-                        <div class="flex items-center">
-                            <div class="w-16 h-16 rounded-full flex items-center justify-center bg-green-200 mr-3">
-                                <i class="fa-solid fa-list-check text-2xl text-green-600"></i>
-                            </div>
-                            <div class="ml-4">
-                                <h3 class="text-base font-semibold mb-2">List Materi</h3>
-                                <h3 class="text-5xl font-semibold mb-2 text-green-600">36</h3>
-                                <p class="text-muted">Tersedia</p>
-                            </div>
+                    <!-- Pagination -->
+                    <div class="px-6 py-4 flex items-center justify-between border-t border-gray-200 bg-gray-50">
+                        <div class="flex-1 flex justify-between sm:hidden">
+                            <button class="prev-page-mobile relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                Previous
+                            </button>
+                            <button class="next-page-mobile ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                Next
+                            </button>
                         </div>
-                    </div>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="content-card rounded-lg p-6 bg-white shadow-md animate-fade-in-up animate-delay-300 hover:shadow-lg transition-shadow duration-300">
-                        <div class="flex items-center">
-                            <div class="w-16 h-16 rounded-full flex items-center justify-center bg-yellow-200 mr-3">
-                                <i class="fa-solid fa-calendar text-2xl text-yellow-600"></i>
+                        <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                            <div>
+                                <p class="pagination-info text-sm text-gray-700">
+                                    <!-- Akan diisi oleh JavaScript -->
+                                </p>
                             </div>
-                            <div class="ml-4">
-                                <h3 class="text-base font-semibold mb-2">Jumlah Kelas</h3>
-                                <h3 class="text-5xl font-semibold mb-2 text-yellow-600">36</h3>
-                                <p class="text-muted">Tersedia</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="content-card rounded-lg p-6 bg-white shadow-md animate-fade-in-up animate-delay-400 hover:shadow-lg transition-shadow duration-300">
-                        <div class="flex items-center">
-                            <div class="w-16 h-16 rounded-full flex items-center justify-center bg-purple-200 mr-3">
-                                <i class="fa-solid fa-book-open-reader text-2xl text-purple-600"></i>
-                            </div>
-                            <div class="ml-4">
-                                <h3 class="text-base font-semibold mb-2">Jumlah Pelajaran</h3>
-                                <h3 class="text-5xl font-semibold mb-2 text-purple-600">36</h3>
-                                <p class="text-muted">Tersedia</p>
+                            <div>
+                                <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+                                    <button class="prev-page relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                        <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                                        </svg>
+                                    </button>
+                                    <div class="page-buttons flex">
+                                        <!-- Tombol halaman akan diisi oleh JavaScript -->
+                                    </div>
+                                    <button class="next-page relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                        <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+                                        </svg>
+                                    </button>
+                                </nav>
                             </div>
                         </div>
                     </div>
@@ -228,145 +318,6 @@ $title_page = "NCEEC";
             </div>
         </main>
     </div>
-
-    <script>
-        let currentPage = 'Dashboard';
-
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('overlay');
-
-            if (sidebar.classList.contains('-translate-x-full')) {
-                sidebar.classList.remove('-translate-x-full');
-                overlay.classList.remove('hidden');
-            } else {
-                sidebar.classList.add('-translate-x-full');
-                overlay.classList.add('hidden');
-            }
-        }
-
-        function setActivePage(pageName) {
-            // Update current page
-            currentPage = pageName;
-
-            // Update page title
-            document.getElementById('page-title').textContent = pageName;
-
-            // Update content
-            const contentTitle = document.getElementById('content-title');
-            const contentDescription = document.getElementById('content-description');
-
-            contentTitle.textContent = `Ini halaman ${pageName}`;
-
-            // Set description based on page
-            const descriptions = {
-                'Dashboard': 'Selamat datang di panel administrasi. Pilih menu di sidebar untuk navigasi ke halaman yang diinginkan.',
-                'List Materi': 'Halaman untuk mengelola daftar materi pembelajaran. Anda dapat menambah, mengedit, atau menghapus materi di sini.',
-                'Data Absen Tutor': 'Halaman untuk melihat dan mengelola data absensi tutor. Monitor kehadiran dan rekap absensi tutor.',
-                'Data Tutor': 'Halaman untuk mengelola data tutor. Kelola informasi profil, jadwal, dan data tutor lainnya.'
-            };
-
-            contentDescription.textContent = descriptions[pageName] || `Konten untuk halaman ${pageName}`;
-
-            // Update active menu
-            const menuItems = document.querySelectorAll('.menu-item');
-            menuItems.forEach(item => item.classList.remove('active'));
-
-            const menuMap = {
-                'Dashboard': 'menu-dashboard',
-                'List Materi': 'menu-materi',
-                'Data Absen Tutor': 'menu-absen',
-                'Data Tutor': 'menu-tutor'
-            };
-
-            if (menuMap[pageName]) {
-                document.getElementById(menuMap[pageName]).classList.add('active');
-            }
-
-            // Close sidebar on mobile after selection
-            if (window.innerWidth < 1024) {
-                toggleSidebar();
-            }
-        }
-
-        function logout() {
-            const modal = document.createElement('div');
-            modal.id = 'logout-modal';
-            modal.innerHTML = `
-                <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div class="bg-white rounded-lg p-6 w-96">
-                        <h2 class="text-lg font-semibold mb-4">Konfirmasi Logout</h2>
-                        <p class="text-sm mb-6">Apakah Anda yakin ingin logout?</p>
-                        <div class="flex justify-end space-x-4">
-                            <button id="close-modal" class="px-4 py-2 bg-gray-300 rounded">Batal</button>
-                            <button id="confirm-logout" class="px-4 py-2 bg-red-500 text-white rounded">Logout</button>
-                        </div>
-                    </div>
-                </div>
-            `;
-            document.body.appendChild(modal);
-
-            document.getElementById('close-modal').addEventListener('click', () => {
-                modal.remove();
-            });
-
-            document.getElementById('confirm-logout').addEventListener('click', () => {
-                window.location.href = '../../auth/logout.php';
-            });
-        }
-
-        // Close sidebar when clicking outside on mobile
-        document.addEventListener('click', function(event) {
-            const sidebar = document.getElementById('sidebar');
-            const hamburger = event.target.closest('button[onclick="toggleSidebar()"]');
-
-            if (!sidebar.contains(event.target) && !hamburger && window.innerWidth < 1024) {
-                if (!sidebar.classList.contains('-translate-x-full')) {
-                    toggleSidebar();
-                }
-            }
-        });
-
-        // Handle window resize
-        window.addEventListener('resize', function() {
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('overlay');
-
-            if (window.innerWidth >= 1024) {
-                sidebar.classList.remove('-translate-x-full');
-                overlay.classList.add('hidden');
-            } else {
-                sidebar.classList.add('-translate-x-full');
-                overlay.classList.add('hidden');
-            }
-        });
-
-        const userMenuButton = document.getElementById('user-menu-button');
-        const userMenu = document.getElementById('user-menu');
-        const userMenuIcon = document.getElementById('user-menu-icon');
-
-        userMenuButton.addEventListener('click', () => {
-            // Toggle rotasi antara 0 dan 180 derajat dengan transition
-            const currentRotation = userMenu.classList.contains('hidden') ? 180 : 0;
-            userMenuIcon.style.transform = `rotate(${currentRotation}deg)`;
-            userMenuIcon.style.transition = 'transform 0.3s ease';
-            userMenu.classList.toggle('hidden');
-        });
-
-        document.addEventListener('click', (event) => {
-            if (!userMenuButton.contains(event.target) && !userMenu.contains(event.target)) {
-                // Kembalikan rotasi ke 0 derajat saat menutup menu dengan transition
-                userMenuIcon.style.transform = 'rotate(0deg)';
-                userMenu.classList.add('hidden');
-            }
-        });
-    </script>
-    <style>
-
-    </style>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindplus/elements@1" type="module"></script>
-
     <!-- Footer -->
     <footer class="bg-white shadow-md lg:ml-64 mt-auto bottom-0">
         <div class="max-w-7xl mx-auto py-4 px-6">
@@ -375,6 +326,511 @@ $title_page = "NCEEC";
             </div>
         </div>
     </footer>
+
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindplus/elements@1" type="module"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://npmcdn.com/flatpickr/dist/l10n/id.js"></script>
+    <script src="../../../assets/js/sidebar.js"></script>
+
+    <script>
+        // Data dan konfigurasi awal
+        let allTeachers = <?php echo json_encode($data_absent_today['data']); ?>;
+        let filteredTeachers = [...allTeachers];
+        let currentPage = 1;
+        const rowsPerPage = 10;
+
+        // Inisialisasi flatpickr untuk filter tanggal
+        document.addEventListener('DOMContentLoaded', function() {
+            // Setup date picker dengan konfigurasi yang lebih baik
+            flatpickr("#filterTanggal", {
+                dateFormat: "Y-m-d",
+                locale: "id",
+                allowInput: true,
+                maxDate: "today",
+                disableMobile: true,
+                onChange: function(selectedDates, dateStr, instance) {
+                    console.log('Date changed:', dateStr);
+                }
+            });
+
+            // Tambahkan event listener untuk filter nama (real-time)
+            document.getElementById('filterNama').addEventListener('input', debounce(applyFilters, 500));
+
+            // Render tabel awal
+            renderTable();
+            updatePaginationInfo();
+            setupPaginationListeners();
+        });
+
+        function showNotification(message, type = 'info') {
+            // Buat element notifikasi
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg transition-all duration-300 transform translate-x-full`;
+
+            // Set warna berdasarkan type
+            switch (type) {
+                case 'success':
+                    notification.className += ' bg-green-500 text-white';
+                    break;
+                case 'error':
+                    notification.className += ' bg-red-500 text-white';
+                    break;
+                case 'warning':
+                    notification.className += ' bg-yellow-500 text-white';
+                    break;
+                default:
+                    notification.className += ' bg-blue-500 text-white';
+            }
+
+            notification.innerHTML = `
+        <div class="flex items-center">
+            <span>${message}</span>
+            <button onclick="this.parentElement.parentElement.remove()" class="ml-4 text-white hover:text-gray-200">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    `;
+
+            document.body.appendChild(notification);
+
+            // Animate in
+            setTimeout(() => {
+                notification.classList.remove('translate-x-full');
+            }, 100);
+
+            // Auto remove after 5 seconds
+            setTimeout(() => {
+                notification.classList.add('translate-x-full');
+                setTimeout(() => {
+                    if (notification.parentElement) {
+                        notification.remove();
+                    }
+                }, 300);
+            }, 5000);
+        }
+
+        async function applyFilters() {
+            const namaFilter = document.getElementById('filterNama').value.toLowerCase().trim();
+            const tanggalFilter = document.getElementById('filterTanggal').value.trim();
+            const statusFilter = document.getElementById('filterStatus').value.trim();
+            const moodFilter = document.getElementById('filterMood').value.trim();
+
+            console.log('Applying filters:', {
+                namaFilter,
+                tanggalFilter,
+                statusFilter,
+                moodFilter
+            });
+
+            // Jika ada filter tanggal, ambil data dari server
+            if (tanggalFilter !== '') {
+                try {
+                    const response = await fetchDataByDate(tanggalFilter);
+                    console.log('Server response:', response);
+
+                    if (response.status) {
+                        allTeachers = response.data;
+                        console.log('Data loaded for date:', tanggalFilter, allTeachers);
+                    } else {
+                        console.error('Error fetching data:', response.message);
+                        allTeachers = [];
+
+                        // Tampilkan pesan error ke user
+                        showNotification('Tidak ada data untuk tanggal yang dipilih', 'warning');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    allTeachers = [];
+                    showNotification('Terjadi kesalahan saat mengambil data', 'error');
+                }
+            } else {
+                // Jika tidak ada filter tanggal, ambil data hari ini
+                const responseToday = <?php echo json_encode($data_absent_today); ?>;
+                allTeachers = responseToday.status ? responseToday.data : [];
+                console.log('Using today data:', allTeachers);
+            }
+
+            // Apply client-side filters
+            filteredTeachers = allTeachers.filter(teacher => {
+                // Filter nama
+                const namaTutor = (teacher.nama_tutor || '').toLowerCase();
+                const namaMatch = namaFilter === '' || namaTutor.includes(namaFilter);
+
+                // Filter status
+                const teacherStatus = teacher.status || '';
+                const statusMatch = statusFilter === '' || teacherStatus === statusFilter;
+
+                // Filter mood
+                let moodMatch = true;
+                if (moodFilter !== '') {
+                    const teacherMood = teacher.mood || '';
+
+                    if (moodFilter === 'Happy') {
+                        moodMatch = teacherMood === 'Baik';
+                    } else if (moodFilter === 'Normal') {
+                        moodMatch = teacherMood === 'Biasa Aja';
+                    } else if (moodFilter === 'Bad') {
+                        moodMatch = teacherMood === 'Buruk';
+                    } else {
+                        moodMatch = teacherMood === moodFilter;
+                    }
+                }
+
+                return namaMatch && statusMatch && moodMatch;
+            });
+
+            console.log('Filtered results:', filteredTeachers);
+
+            currentPage = 1;
+            renderTable();
+            updatePaginationInfo();
+        }
+
+        async function fetchDataByDate(date) {
+            try {
+                // Perbaiki URL endpoint - gunakan file yang sama
+                const response = await fetch(`?action=get_by_date&date=${date}`);
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                const data = await response.json();
+                console.log('Data received:', data); // Debug log
+                return data;
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                return {
+                    status: false,
+                    message: error.message,
+                    data: []
+                };
+            }
+        }
+
+        // Fungsi untuk mereset filter
+        function resetFilters() {
+            document.getElementById('filterNama').value = '';
+            document.getElementById('filterTanggal').value = '';
+            document.getElementById('filterStatus').value = '';
+            document.getElementById('filterMood').value = '';
+
+            // Reset flatpickr
+            if (document.getElementById('filterTanggal')._flatpickr) {
+                document.getElementById('filterTanggal')._flatpickr.clear();
+            }
+
+            // Kembalikan ke data hari ini (semua data)
+            const responseToday = <?php echo json_encode($data_absent_today); ?>;
+            allTeachers = responseToday.status ? responseToday.data : [];
+            filteredTeachers = [...allTeachers];
+
+            console.log('Filters reset, using today data:', allTeachers);
+
+            currentPage = 1;
+            renderTable();
+            updatePaginationInfo();
+        }
+
+        // Fungsi untuk merender tabel
+        function renderTable() {
+            const tableBody = document.getElementById('tableBody');
+
+            if (filteredTeachers.length === 0) {
+                tableBody.innerHTML = `
+            <tr>
+                <td colspan="7" class="px-6 py-4 text-center text-sm text-gray-500">
+                    Tidak ada data yang sesuai dengan filter
+                </td>
+            </tr>
+        `;
+                return;
+            }
+
+            const startIndex = (currentPage - 1) * rowsPerPage;
+            const endIndex = startIndex + rowsPerPage;
+            const paginatedTeachers = filteredTeachers.slice(startIndex, endIndex);
+
+            tableBody.innerHTML = paginatedTeachers.map(absent => {
+                // Format status dan mood dengan nilai default jika tidak ada
+                const status = absent.status || 'N/A';
+                const mood = absent.mood || 'N/A';
+
+                // Tentukan kelas CSS berdasarkan status
+                let statusClass = '';
+                let statusText = status;
+
+                switch (status) {
+                    case 'Hadir':
+                        statusClass = 'bg-green-100 text-green-800';
+                        break;
+                    case 'Terlambat':
+                        statusClass = 'bg-yellow-100 text-yellow-800';
+                        break;
+                    case 'Izin':
+                        statusClass = 'bg-blue-100 text-blue-800';
+                        break;
+                    case 'Sakit':
+                        statusClass = 'bg-purple-100 text-purple-800';
+                        break;
+                    case 'Alpa':
+                        statusClass = 'bg-red-100 text-red-800';
+                        break;
+                    default:
+                        statusClass = 'bg-gray-100 text-gray-800';
+                        statusText = 'N/A';
+                }
+
+                // Tentukan kelas CSS berdasarkan mood
+                let moodClass = '';
+                let moodText = mood;
+
+                switch (mood) {
+                    case 'Baik':
+                        moodClass = 'bg-green-100 text-green-800';
+                        moodText = 'Baik';
+                        break;
+                    case 'Biasa Aja':
+                        moodClass = 'bg-yellow-100 text-yellow-800';
+                        moodText = 'Biasa Aja';
+                        break;
+                    case 'Buruk':
+                        moodClass = 'bg-red-100 text-red-800';
+                        moodText = 'Buruk';
+                        break;
+                    default:
+                        moodClass = 'bg-gray-100 text-gray-800';
+                        moodText = 'N/A';
+                }
+
+                return `
+            <tr class="hover:bg-gray-50 transition duration-150 text-center">
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <input type="checkbox" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-4 w-4">
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 text-center">
+                    ${absent.nama_tutor || 'N/A'}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 text-center">
+                    ${absent.tanggal ? formatDate(absent.tanggal) : 'N/A'}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 text-center">
+                    ${absent.waktu || 'N/A'}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${statusClass}">
+                        ${statusText}
+                    </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${moodClass}">
+                        ${moodText}
+                    </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                    ${absent.keterangan || '-'}
+                </td>
+            </tr>
+        `;
+            }).join('');
+        }
+
+        // Fungsi untuk memformat tanggal
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+
+            try {
+                const date = new Date(dateString);
+
+                if (isNaN(date.getTime())) {
+                    return 'N/A';
+                }
+
+                const options = {
+                    weekday: 'short',
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric'
+                };
+
+                return date.toLocaleDateString('id-ID', options);
+            } catch (error) {
+                console.error('Error formatting date:', error);
+                return 'N/A';
+            }
+        }
+
+        // Fungsi untuk update info pagination
+        function updatePaginationInfo() {
+            const totalPages = Math.ceil(filteredTeachers.length / rowsPerPage);
+            const startItem = filteredTeachers.length > 0 ? (currentPage - 1) * rowsPerPage + 1 : 0;
+            const endItem = Math.min(currentPage * rowsPerPage, filteredTeachers.length);
+
+            const paginationInfo = document.querySelector('.pagination-info');
+            if (paginationInfo) {
+                paginationInfo.textContent = `Menampilkan ${startItem}-${endItem} dari ${filteredTeachers.length} hasil`;
+            }
+
+            // Update tombol navigasi
+            const prevButton = document.querySelector('.prev-page');
+            const nextButton = document.querySelector('.next-page');
+            const prevMobileButton = document.querySelector('.prev-page-mobile');
+            const nextMobileButton = document.querySelector('.next-page-mobile');
+
+            if (prevButton) prevButton.disabled = currentPage === 1;
+            if (prevMobileButton) prevMobileButton.disabled = currentPage === 1;
+            if (nextButton) nextButton.disabled = currentPage === totalPages || totalPages === 0;
+            if (nextMobileButton) nextMobileButton.disabled = currentPage === totalPages || totalPages === 0;
+
+            // Update tombol halaman
+            updatePageButtons(totalPages);
+        }
+
+        // Fungsi untuk update tombol halaman
+        function updatePageButtons(totalPages) {
+            const pageButtonsContainer = document.querySelector('.page-buttons');
+            if (!pageButtonsContainer) return;
+
+            pageButtonsContainer.innerHTML = '';
+
+            if (totalPages === 0) return;
+
+            const maxVisiblePages = 5;
+            let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+            let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+
+            if (endPage - startPage + 1 < maxVisiblePages) {
+                startPage = Math.max(1, endPage - maxVisiblePages + 1);
+            }
+
+            // Tombol halaman pertama
+            if (startPage > 1) {
+                const button = createPageButton('1', 1);
+                pageButtonsContainer.appendChild(button);
+
+                if (startPage > 2) {
+                    const ellipsis = document.createElement('span');
+                    ellipsis.className = 'relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700';
+                    ellipsis.textContent = '...';
+                    pageButtonsContainer.appendChild(ellipsis);
+                }
+            }
+
+            // Tombol halaman tengah
+            for (let i = startPage; i <= endPage; i++) {
+                const button = createPageButton(i.toString(), i);
+                pageButtonsContainer.appendChild(button);
+            }
+
+            // Tombol halaman terakhir
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) {
+                    const ellipsis = document.createElement('span');
+                    ellipsis.className = 'relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700';
+                    ellipsis.textContent = '...';
+                    pageButtonsContainer.appendChild(ellipsis);
+                }
+
+                const button = createPageButton(totalPages.toString(), totalPages);
+                pageButtonsContainer.appendChild(button);
+            }
+        }
+
+        // Fungsi helper untuk membuat tombol halaman
+        function createPageButton(text, pageNumber) {
+            const button = document.createElement('button');
+            const isActive = currentPage === pageNumber;
+
+            button.className = `relative inline-flex items-center px-4 py-2 border ${
+        isActive 
+            ? 'bg-blue-50 border-blue-500 text-blue-600' 
+            : 'border-gray-300 bg-white text-gray-500 hover:bg-gray-50'
+    } text-sm font-medium`;
+
+            button.textContent = text;
+            button.addEventListener('click', () => changePage(pageNumber));
+
+            return button;
+        }
+
+        // Fungsi untuk navigasi halaman
+        function changePage(newPage) {
+            currentPage = newPage;
+            renderTable();
+            updatePaginationInfo();
+
+            // Scroll to top
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        }
+
+        // Setup event listeners untuk pagination
+        function setupPaginationListeners() {
+            // Pagination controls
+            const prevButton = document.querySelector('.prev-page');
+            const nextButton = document.querySelector('.next-page');
+            const prevMobileButton = document.querySelector('.prev-page-mobile');
+            const nextMobileButton = document.querySelector('.next-page-mobile');
+
+            if (prevButton) {
+                prevButton.addEventListener('click', () => {
+                    if (currentPage > 1) changePage(currentPage - 1);
+                });
+            }
+
+            if (nextButton) {
+                nextButton.addEventListener('click', () => {
+                    const totalPages = Math.ceil(filteredTeachers.length / rowsPerPage);
+                    if (currentPage < totalPages) changePage(currentPage + 1);
+                });
+            }
+
+            if (prevMobileButton) {
+                prevMobileButton.addEventListener('click', () => {
+                    if (currentPage > 1) changePage(currentPage - 1);
+                });
+            }
+
+            if (nextMobileButton) {
+                nextMobileButton.addEventListener('click', () => {
+                    const totalPages = Math.ceil(filteredTeachers.length / rowsPerPage);
+                    if (currentPage < totalPages) changePage(currentPage + 1);
+                });
+            }
+
+            // Select all checkbox
+            const selectAllCheckbox = document.getElementById('selectAll');
+            if (selectAllCheckbox) {
+                selectAllCheckbox.addEventListener('change', function() {
+                    const checkboxes = document.querySelectorAll('#tableBody input[type="checkbox"]');
+                    checkboxes.forEach(checkbox => {
+                        checkbox.checked = this.checked;
+                    });
+                });
+            }
+        }
+
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // Fungsi untuk logout
+        function logout() {
+            if (confirm('Apakah Anda yakin ingin logout?')) {
+                window.location.href = '../../auth/logout.php';
+            }
+        }
+    </script>
 </body>
 
 </html>

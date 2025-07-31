@@ -2,34 +2,47 @@
 require_once(__DIR__ . '/../../../config.php');
 date_default_timezone_set('Asia/Jakarta');
 
-function getAbsentWhereToday() {
-    $date_now = date('Y-m-d'); // Pastikan ini sesuai
+function getAbsentWhereToday()
+{
+    $date_now = date('Y-m-d');
     $conn = connectDatabase();
-    $query = "SELECT * FROM absensi WHERE tanggal = ?";
-    
+
+    $query = "SELECT 
+                a.*,
+                u.username,
+                t.nama_tutor,
+                p.pelajaran
+              FROM absensi a
+              INNER JOIN users u ON a.user_id = u.id 
+              INNER JOIN tutor t ON u.id = t.user_id
+              INNER JOIN pelajaran p ON t.id_pelajaran = p.id_pelajaran
+              WHERE a.tanggal = ? 
+              AND (a.status = 'Hadir' OR a.status = 'Terlambat')";
+
     $stmt = $conn->prepare($query);
     $stmt->bind_param("s", $date_now);
     $stmt->execute();
     $result = $stmt->get_result();
 
     if (!$result) {
-        return [];
+        return ['status' => false, 'message' => $conn->error];
     }
 
     $absences = [];
-    while ($row = mysqli_fetch_assoc($result)) {
+    while ($row = $result->fetch_assoc()) {
         $absences[] = $row;
     }
 
-    return $absences;
+    return ['status' => true, 'data' => $absences];
 }
 
-function getAllCountAbsentToday() {
-    $date_now = date('Y-m-d'); 
+function getAllCountAbsentToday()
+{
+    $date_now = date('Y-m-d');
     $conn = connectDatabase();
     $query = "SELECT COUNT(*) AS total_absen 
-              FROM absensi 
-              WHERE tanggal = ? AND status = 'Hadir'";
+              FROM absensi a
+              WHERE tanggal = ? AND (a.status = 'Hadir' OR a.status = 'Terlambat')";
 
     $stmt = $conn->prepare($query);
     $stmt->bind_param("s", $date_now);
@@ -38,39 +51,41 @@ function getAllCountAbsentToday() {
 
     return $result['total_absen'];
 }
-function getWeeklyAttendanceForUser($userId) {
+
+function getWeeklyAttendanceForUser($userId)
+{
     $conn = connectDatabase();
-    
+
     // Get dates for the past 7 days including today
     $dates = [];
     for ($i = 6; $i >= 0; $i--) {
         $dates[] = date('Y-m-d', strtotime("-$i days"));
     }
-    
+
     $weeklyData = [];
-    
+
     foreach ($dates as $date) {
         $query = "SELECT status, waktu, mood, keterangan 
                   FROM absensi 
                   WHERE tanggal = ? AND user_id = ?";
-        
+
         $stmt = $conn->prepare($query);
         $stmt->bind_param("si", $date, $userId);
         $stmt->execute();
         $result = $stmt->get_result();
-        
+
         $status = 'Tidak Hadir'; // Default
         $waktu = null;
         $mood = null;
         $keterangan = null;
-        
+
         if ($row = $result->fetch_assoc()) {
             $status = $row['status'];
             $waktu = $row['waktu'];
             $mood = $row['mood'];
             $keterangan = $row['keterangan'];
         }
-        
+
         $weeklyData[] = [
             'date' => date('D, d M', strtotime($date)),
             'status' => $status,
@@ -79,6 +94,40 @@ function getWeeklyAttendanceForUser($userId) {
             'keterangan' => $keterangan
         ];
     }
-    
+
     return $weeklyData;
+}
+
+
+function getAllAbsentWhereSelectedDate($date)
+{
+    $conn = connectDatabase();
+
+    $query = "SELECT 
+                a.*,
+                u.username,
+                t.nama_tutor,
+                p.pelajaran
+              FROM absensi a
+              INNER JOIN users u ON a.user_id = u.id 
+              INNER JOIN tutor t ON u.id = t.user_id
+              INNER JOIN pelajaran p ON t.id_pelajaran = p.id_pelajaran
+              WHERE a.tanggal = ?
+              ORDER BY a.waktu DESC";
+
+    $stmt = $conn->prepare($query);
+    $stmt->bind_param("s", $date);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    if (!$result) {
+        return ['status' => false, 'message' => $conn->error];
+    }
+
+    $absences = [];
+    while ($row = $result->fetch_assoc()) {
+        $absences[] = $row;
+    }
+
+    return ['status' => true, 'data' => $absences];
 }
