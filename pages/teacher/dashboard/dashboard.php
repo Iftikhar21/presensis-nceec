@@ -570,24 +570,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 overlay.classList.add('hidden');
             }
         });
-
-        const userMenuButton = document.getElementById('user-menu-button');
-        const userMenu = document.getElementById('user-menu');
-        const userMenuIcon = document.getElementById('user-menu-icon');
-
-        userMenuButton.addEventListener('click', () => {
-            const currentRotation = userMenu.classList.contains('hidden') ? 180 : 0;
-            userMenuIcon.style.transform = `rotate(${currentRotation}deg)`;
-            userMenuIcon.style.transition = 'transform 0.3s ease';
-            userMenu.classList.toggle('hidden');
-        });
-
-        document.addEventListener('click', (event) => {
-            if (!userMenuButton.contains(event.target) && !userMenu.contains(event.target)) {
-                userMenuIcon.style.transform = 'rotate(0deg)';
-                userMenu.classList.add('hidden');
-            }
-        });
+      
     </script>
 
     <!-- Footer -->

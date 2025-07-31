@@ -1,14 +1,12 @@
 <?php
-// Tambahkan ini dulu
-ini_set('session.cookie_lifetime', 0); // session hilang saat browser ditutup
-
+ini_set('session.cookie_lifetime', 0);
 session_start();
 include '../../../includes/crud/crud-auth/crud-login.php';
-include '../../../includes/crud/crud-teacher/crud-teacher.php';
-include '../../../includes/crud/crud-material/crud-material.php';
 include '../../../includes/crud/crud-lessons/crud-lessons.php';
+include '../../../includes/crud/crud-material/crud-material.php';
+include '../../../includes/crud/crud-teacher/crud-teacher.php';
 
-// Pengecekan session utama
+// Pengecekan session
 if (!isset($_SESSION['username']) && !isset($_SESSION['ID'])) {
     header("Location: ../../auth/form-login.php");
     exit();
@@ -16,20 +14,29 @@ if (!isset($_SESSION['username']) && !isset($_SESSION['ID'])) {
 
 $id_user = $_SESSION['ID'];
 
+// Ambil data teacher dari users table
 $data_teacher = getTeacherWhereId($id_user);
-if (!$data_teacher['status']) {
-    echo "<p>Error: " . $data_teacher['message'] . "</p>";
-    exit();
-}
 
-if (!isset($data_teacher['teacher']['username'])) {
+if (!$data_teacher['status'] || !isset($data_teacher['teacher']['username'])) {
     echo "<p>Error: Teacher data is incomplete.</p>";
     exit();
 }
 
+// Ambil data tutor dari tutor table berdasarkan user_id
+$tutor_data = getTutorByUserId($id_user);
+
+if (!$tutor_data) {
+    echo "<p>Error: Tutor profile not found. Please complete your tutor profile first.</p>";
+    exit();
+}
+
+$id_tutor = $tutor_data['id_tutor'];
+$nama_tutor = $tutor_data['nama_tutor'];
+$id_pelajaran_tutor = $tutor_data['id_pelajaran']; // Pelajaran yang diajarkan tutor ini
+
 $username = $data_teacher['teacher']['username'];
-$email = $data_teacher['teacher']['email'];
 $role = ucfirst($data_teacher['teacher']['role']);
+$title_page = "NCEEC";
 
 // Handle AJAX requests
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
@@ -37,8 +44,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
     switch ($_POST['action']) {
         case 'add':
+            // Validasi bahwa pelajaran yang dipilih sesuai dengan yang diajarkan tutor
+            if ($_POST['id_pelajaran'] != $id_pelajaran_tutor) {
+                echo json_encode([
+                    'status' => false,
+                    'message' => 'Anda hanya dapat menambahkan materi untuk pelajaran yang Anda ajarkan'
+                ]);
+                exit;
+            }
+            
             $result = insertMateri(
-                $_POST['id_tutor'],
+                $id_tutor,
                 $_POST['id_pelajaran'],
                 $_POST['isi_materi'],
                 $_POST['waktu']
@@ -47,9 +63,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             exit;
 
         case 'update':
+            // Validasi bahwa pelajaran yang dipilih sesuai dengan yang diajarkan tutor
+            if ($_POST['id_pelajaran'] != $id_pelajaran_tutor) {
+                echo json_encode([
+                    'status' => false,
+                    'message' => 'Anda hanya dapat mengupdate materi untuk pelajaran yang Anda ajarkan'
+                ]);
+                exit;
+            }
+            
             $result = updateMateri(
                 $_POST['id_materi'],
-                $_POST['id_tutor'],
+                $id_tutor,
                 $_POST['id_pelajaran'],
                 $_POST['isi_materi'],
                 $_POST['waktu']
@@ -58,6 +83,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             exit;
 
         case 'delete':
+            // Validasi bahwa materi yang akan dihapus adalah milik tutor ini
+            $materi_check = getMaterialWhereId($_POST['id_materi']);
+            if (!$materi_check['status'] || $materi_check['materi']['id_tutor'] != $id_tutor) {
+                echo json_encode([
+                    'status' => false,
+                    'message' => 'Anda hanya dapat menghapus materi yang Anda buat'
+                ]);
+                exit;
+            }
+            
             $result = deleteMateri($_POST['id_materi']);
             echo json_encode($result);
             exit;
@@ -71,36 +106,81 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $result = getMaterialWhereId($_POST['id_materi']);
             echo json_encode($result);
             exit;
+
+        case 'get_materials_by_lesson':
+            // Hanya ambil materi untuk pelajaran yang diajarkan tutor ini dan yang dibuat oleh tutor ini
+            if ($_POST['lesson_id'] != $id_pelajaran_tutor) {
+                echo json_encode([
+                    'status' => false,
+                    'message' => 'Anda tidak memiliki akses ke pelajaran ini'
+                ]);
+                exit;
+            }
+            
+            $result = getMaterialsByLessonAndTutor($_POST['lesson_id'], $id_tutor);
+            echo json_encode(['status' => true, 'materi' => $result]);
+            exit;
     }
 }
 
-// Get all materi data for initial load
-$all_materi = getAllMaterial();
-$materi_count = $all_materi['status'] ? count($all_materi['materi']) : 0;
+// Hanya ambil pelajaran yang diajarkan oleh tutor ini
+$lessons = [];
+$current_lesson = getLessonsWhereId($id_pelajaran_tutor);
+if ($current_lesson) {
+    $lessons[] = $current_lesson;
+}
+$totalLessons = count($lessons);
 
-// Get pelajaran data for dropdown
+// Ambil materi berdasarkan pelajaran yang dipilih (jika ada) dan tutor yang sedang login
+$selectedLesson = isset($_GET['lesson_id']) ? $_GET['lesson_id'] : null;
 
+// Validasi bahwa lesson yang dipilih adalah yang diajarkan tutor ini
+if ($selectedLesson && $selectedLesson != $id_pelajaran_tutor) {
+    header("Location: material-list.php");
+    exit();
+}
 
-$pelajaran_list = getAllLessons();
+$materials = $selectedLesson ? getMaterialsByLessonAndTutor($selectedLesson, $id_tutor) : [];
+$totalMaterials = $selectedLesson ? count($materials) : 0;
+
+// Get tutor list for dropdown (tidak digunakan lagi karena hanya tutor yang login)
 $tutor_list = getAllTeachers();
 
-$title_page = "NCEEC";
+// Function untuk mendapatkan materi berdasarkan pelajaran dan tutor
+function getMaterialsByLessonAndTutor($lessonId, $tutorId) {
+    $conn = connectDatabase();
+    $lessonId = mysqli_real_escape_string($conn, $lessonId);
+    $tutorId = mysqli_real_escape_string($conn, $tutorId);
+    $query = "SELECT * FROM materi WHERE id_pelajaran = '$lessonId' AND id_tutor = '$tutorId' ORDER BY waktu DESC";
+    $result = mysqli_query($conn, $query);
 
+    if (!$result) {
+        return [];
+    }
+
+    $materials = [];
+    while ($row = mysqli_fetch_assoc($result)) {
+        $materials[] = $row;
+    }
+
+    return $materials;
+}
 ?>
+
 <!DOCTYPE html>
 <html lang="id">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>List Materi - <?= htmlspecialchars($title_page); ?></title>
+    <title>List Materi - <?= $title_page; ?></title>
     <link rel="icon" href="../../../assets/img/nceec-logo.jpg" type="image/x-icon">
     <link rel="stylesheet" href="../../../assets/css/index.css">
     <link rel="stylesheet" href="../../../assets/css/app.css">
     <link rel="stylesheet" href="../../../assets/css/main.css">
     <link rel="stylesheet" href="../../../assets/css/dashboard.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">   
 </head>
 
 <body class="bg-primary text-primary min-h-screen flex flex-col">
@@ -118,12 +198,12 @@ $title_page = "NCEEC";
                     Dashboard
                 </a>
 
-                 <a href="../list-materi/material-list.php" onclick="setActivePage('List Materi')" class="menu-item active flex items-center px-4 py-3 text-sm rounded-lg" id="menu-materi">
+                <a href="../list-materi/material-list.php" onclick="setActivePage('List Materi')" class="menu-item active flex items-center px-4 py-3 text-sm rounded-lg" id="menu-materi">
                     <i class="fa-solid fa-list-check text-lg mr-3"></i>
                     List Materi
                 </a>
-
-                 <div class="border-t border-gray-600 mt-6 pt-6">
+                
+                <div class="border-t border-gray-600 mt-6 pt-6">
                     <a href="#" onclick="logout()" class="menu-item flex items-center px-4 py-3 text-sm rounded-lg text-red-300 hover:text-red-200" id="menu-logout">
                         <i class="fa-solid fa-right-from-bracket text-lg mr-3"></i>
                         Logout
@@ -144,9 +224,10 @@ $title_page = "NCEEC";
                 <button onclick="toggleSidebar()" class="lg:hidden p-2 rounded-md btn-hover btn-focus">
                     <i class="fa-solid fa-bars"></i>
                 </button>
-                <h2 id="page-title" class="ml-4 lg:ml-0 text-xl font-semibold">List Materi</h2>
+                <h2 id="page-title" class="ml-4 lg:ml-0 text-xl font-semibold">
+                    <?= $selectedLesson ? 'Daftar Materi' : 'Daftar Pelajaran' ?>
+                </h2>
             </div>
-
             <div class="flex items-center space-x-4">
                 <div class="flex items-center text-sm text-muted z-10">
                     <div class="relative">
@@ -156,7 +237,7 @@ $title_page = "NCEEC";
                             <i class="fa-solid fa-chevron-down" id="user-menu-icon"></i>
                         </button>
                         <div id="user-menu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg">
-                            <a href="../../auth/teacher/profile.php" class="block px-6 py-4 text-sm text-gray-700 hover:bg-gray-100">
+                            <a href="../../auth/profile.php" class="block px-6 py-4 text-sm text-gray-700 hover:bg-gray-100">
                                 <i class="fa-solid fa-user mr-3 text-blue-700"></i>
                                 Profile
                             </a>
@@ -173,107 +254,226 @@ $title_page = "NCEEC";
 
         <!-- Content Area -->
         <main class="p-6 flex-grow">
-            <div class="max-w-7xl mx-auto">
-                <!-- Welcome Card -->
-                <div class="content-card rounded-lg p-6 bg-white shadow-md mb-6 overflow-hidden relative animate-fade-in-down">
+            <?php if (!$selectedLesson): ?>
+                <!-- Tampilan Daftar Pelajaran -->
+                <div class="content-card rounded-lg p-6 bg-white shadow-md mb-4 overflow-hidden relative animate-fade-in-down">
                     <div class="absolute -right-10 -bottom-10 w-32 h-32 rounded-full bg-blue-100 opacity-50"></div>
                     <div class="flex items-center justify-between relative z-5">
                         <div>
-                            <h3 class="text-xl md:text-2xl font-semibold mb-1">Kelola Materi Pembelajaran</h3>
-                            <p class="text-xs md:text-sm text-muted">Tambah, edit, dan kelola materi pembelajaran dengan mudah</p>
+                            <h3 class="text-xl md:text-2xl font-semibold mb-1">Pelajaran Anda</h3>
+                            <p class="text-xs md:text-sm text-muted">Pelajaran yang Anda ajarkan</p>
                         </div>
                         <div class="text-right">
-                            <div class="text-2xl md:text-3xl font-bold text-blue-600" id="total-materi-count"><?= $materi_count ?></div>
-                            <div class="text-xs md:text-sm text-gray-500">Total Materi</div>
+                            <h3 class="text-xl md:text-3xl font-bold text-blue-600 mb-1"><?= $totalLessons ?></h3>
+                            <p class="text-xs md:text-sm text-muted">Pelajaran</p>
                         </div>
                     </div>
                 </div>
 
-                <!-- Action Buttons -->
-                <div class="mb-6 flex flex-col sm:flex-row gap-4">
-                    <button onclick="openAddModal()" class="btn-primary flex items-center justify-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200">
-                        <i class="fa-solid fa-plus mr-2"></i>
-                        Tambah Materi Baru
-                    </button>
-
-                    <div class="flex gap-2">
-                        <div class="relative">
-                            <input type="text" id="search-input" placeholder="Cari materi..."
-                                class="pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full sm:w-64">
-                            <i class="fa-solid fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <?php foreach ($lessons as $lesson): ?>
+                        <a href="?lesson_id=<?= $lesson['id_pelajaran'] ?>" class="lesson-card block p-6 bg-white rounded-lg shadow-md border border-gray-200 hover:border-blue-300">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0 h-12 w-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-book text-blue-600 text-xl"></i>
+                                </div>
+                                <div class="ml-4">
+                                    <h3 class="text-lg font-semibold text-gray-900"><?= htmlspecialchars($lesson['pelajaran']) ?></h3>
+                                    <p class="text-sm text-gray-500">Kode: <?= htmlspecialchars($lesson['id_pelajaran']) ?></p>
+                                </div>
+                            </div>
+                            <div class="mt-4 flex justify-between items-center">
+                                <span class="text-xs text-gray-500">
+                                    <?= count(getMaterialsByLessonAndTutor($lesson['id_pelajaran'], $id_tutor)) ?> Materi
+                                </span>
+                                <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                                    Pelajaran Anda
+                                </span>
+                            </div>
+                        </a>
+                    <?php endforeach; ?>
+                    
+                    <?php if (empty($lessons)): ?>
+                        <div class="col-span-full text-center py-12">
+                            <i class="fa-solid fa-book text-4xl text-gray-300 mb-4"></i>
+                            <h3 class="text-lg font-medium text-gray-900 mb-2">Belum ada pelajaran</h3>
+                            <p class="text-gray-500">Anda belum memiliki pelajaran yang diajarkan. Silakan hubungi administrator.</p>
                         </div>
+                    <?php endif; ?>
+                </div>
 
-                        <select id="filter-pelajaran" class="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                            <option value="">Semua Pelajaran</option>
-                            <?php foreach ($pelajaran_list as $pelajaran): ?>
-                                <option value="<?= $pelajaran['id_pelajaran'] ?>"><?= $pelajaran['pelajaran'] ?></option>
-                            <?php endforeach; ?>
-                        </select>
+            <?php else: ?>
+                <!-- Tampilan Daftar Materi untuk Pelajaran yang Dipilih -->
+                <?php
+                $currentLesson = getLessonsWhereId($selectedLesson);
+                if (!$currentLesson) {
+                    echo "<div class='p-6 bg-white rounded-lg shadow-md'>Pelajaran tidak ditemukan</div>";
+                    exit();
+                }
+                ?>
 
-                        <button onclick="refreshData()" class="px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50">
-                            <i class="fa-solid fa-refresh"></i>
-                        </button>
+                <div class="content-card rounded-lg p-6 bg-white shadow-md mb-4 overflow-hidden relative animate-fade-in-down">
+                    <div class="absolute -right-10 -bottom-10 w-32 h-32 rounded-full bg-blue-100 opacity-50"></div>
+                    <div class="flex items-center justify-between relative z-5">
+                        <div>
+                            <h3 class="text-xl md:text-2xl font-semibold mb-1">Materi Anda</h3>
+                            <p class="text-xs md:text-sm text-muted flex flex-col md:flex-row md:items-center">
+                                <span>Pelajaran: <?= htmlspecialchars($currentLesson['pelajaran']) ?></span>
+                                <a href="material-list.php" class="text-blue-600 hover:text-blue-800 mt-1 md:mt-0 md:ml-2">
+                                    <i class="fas fa-arrow-left"></i> Kembali
+                                </a>
+                            </p>
+                        </div>
+                        <div class="text-right">
+                            <h3 class="text-xl md:text-3xl font-bold text-blue-600 mb-1" id="total-materi-count"><?= $totalMaterials ?></h3>
+                            <p class="text-xs md:text-sm text-muted">Total Materi</p>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Materials Table -->
-                <div class="bg-white rounded-lg shadow-md overflow-hidden">
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-200" id="materials-table">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">No</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Materi</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pelajaran</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tutor</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Waktu</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody id="materials-table-body" class="bg-white divide-y divide-gray-200">
-                                <!-- Content will be loaded here via JavaScript -->
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <!-- Loading State -->
-                    <div id="loading-state" class="text-center py-8">
-                        <i class="fa-solid fa-spinner fa-spin text-2xl text-gray-400 mb-2"></i>
-                        <p class="text-gray-500">Memuat data...</p>
-                    </div>
-
-                    <!-- Empty State -->
-                    <div id="empty-state" class="text-center py-12 hidden">
-                        <i class="fa-solid fa-folder-open text-4xl text-gray-300 mb-4"></i>
-                        <h3 class="text-lg font-medium text-gray-900 mb-2">Belum ada materi</h3>
-                        <p class="text-gray-500 mb-4">Mulai dengan menambahkan materi pembelajaran pertama</p>
-                        <button onclick="openAddModal()" class="btn-primary px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                            <i class="fa-solid fa-plus mr-2"></i>
+                <div class="content-card rounded-lg p-6 bg-white shadow-md mb-4 overflow-hidden relative">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-lg font-semibold text-gray-800">
+                            Materi untuk <?= htmlspecialchars($currentLesson['pelajaran']) ?>
+                        </h3>
+                        <button onclick="openAddModal()"
+                            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-150 flex items-center">
+                            <i class="fas fa-plus mr-2"></i>
                             Tambah Materi
                         </button>
                     </div>
-                </div>
 
-                <!-- Pagination -->
-                <div class="mt-6 flex items-center justify-between">
-                    <div class="text-sm text-gray-700">
-                        Menampilkan <span id="showing-from">0</span> - <span id="showing-to">0</span> dari <span id="total-items">0</span> materi
-                    </div>
-                    <div class="flex space-x-2">
-                        <button id="prev-page" class="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
-                            <i class="fa-solid fa-chevron-left"></i>
-                        </button>
-                        <div id="page-numbers" class="flex space-x-1">
-                            <!-- Page numbers will be generated here -->
+                    <!-- Filter Section -->
+                    <div class="p-6 mb-6 border border-gray-200 rounded-lg bg-gray-50">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Judul Materi</label>
+                                <div class="relative">
+                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <svg class="h-5 w-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"></path>
+                                        </svg>
+                                    </div>
+                                    <input
+                                        type="text"
+                                        id="filterJudul"
+                                        placeholder="Cari judul materi..."
+                                        class="pl-10 w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-150">
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Tanggal Upload</label>
+                                <input
+                                    type="date"
+                                    id="filterTanggal"
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-150">
+                            </div>
+
+                            <div class="flex items-end space-x-3">
+                                <button
+                                    onclick="resetFilters()"
+                                    class="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-150 flex items-center justify-center">
+                                    <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                    </svg>
+                                    Reset
+                                </button>
+                                <button
+                                    onclick="applyFilters()"
+                                    class="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-150 flex items-center justify-center">
+                                    <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                                    </svg>
+                                    Terapkan
+                                </button>
+                            </div>
                         </div>
-                        <button id="next-page" class="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
-                            <i class="fa-solid fa-chevron-right"></i>
-                        </button>
+                    </div>
+
+                    <!-- Tabel Materi -->
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-100">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">ID Materi</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Judul Materi</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Tutor</th>
+                                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">Tanggal Upload</th>
+                                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200" id="tableBody">
+                                <!-- Content will be loaded here via JavaScript -->
+                            </tbody>
+                        </table>
+
+                        <!-- Loading State -->
+                        <div id="loading-state" class="text-center py-8 hidden">
+                            <i class="fa-solid fa-spinner fa-spin text-2xl text-gray-400 mb-2"></i>
+                            <p class="text-gray-500">Memuat data...</p>
+                        </div>
+
+                        <!-- Empty State -->
+                        <div id="empty-state" class="text-center py-12 hidden">
+                            <i class="fa-solid fa-folder-open text-4xl text-gray-300 mb-4"></i>
+                            <h3 class="text-lg font-medium text-gray-900 mb-2">Belum ada materi</h3>
+                            <p class="text-gray-500 mb-4">Mulai dengan menambahkan materi pembelajaran pertama</p>
+                            <button onclick="openAddModal()" class="btn-primary px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                                <i class="fa-solid fa-plus mr-2"></i>
+                                Tambah Materi
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div class="px-6 py-4 flex items-center justify-between border-t border-gray-200 bg-gray-50">
+                        <div class="flex-1 flex justify-between sm:hidden">
+                            <button class="prev-page-mobile relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                Previous
+                            </button>
+                            <button class="next-page-mobile ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                Next
+                            </button>
+                        </div>
+                        <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                            <div>
+                                <p class="pagination-info text-sm text-gray-700">
+                                    <!-- Akan diisi oleh JavaScript -->
+                                </p>
+                            </div>
+                            <div>
+                                <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+                                    <button class="prev-page relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                        <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                                        </svg>
+                                    </button>
+                                    <div class="page-buttons flex">
+                                        <!-- Tombol halaman akan diisi oleh JavaScript -->
+                                    </div>
+                                    <button class="next-page relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                        <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+                                        </svg>
+                                    </button>
+                                </nav>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
+            <?php endif; ?>
         </main>
     </div>
+
+    <!-- Footer -->
+    <footer class="bg-white shadow-md lg:ml-64 mt-auto bottom-0">
+        <div class="max-w-7xl mx-auto py-4 px-6">
+            <div class="text-center text-sm text-gray-500">
+                <p>&copy; <?= date('Y') ?> PRESENSIS NCEEC. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
 
     <!-- Add/Edit Modal -->
     <div id="material-modal" class="modal fixed inset-0 bg-black bg-opacity-50 modal-backdrop z-50 hidden flex items-center justify-center p-4">
@@ -291,26 +491,23 @@ $title_page = "NCEEC";
                 <form id="material-form">
                     <input type="hidden" id="material-id" value="">
                     <input type="hidden" id="form-action" value="add">
+                    <input type="hidden" id="lesson-id" value="<?= $id_pelajaran_tutor ?>">
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Tutor *</label>
-                            <select id="tutor-select" name="id_tutor" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" required>
-                                <option value="">Pilih Tutor</option>
-                                <?php foreach ($tutor_list as $tutor): ?>
-                                    <option value="<?= $tutor['id_tutor'] ?>"><?= $tutor['nama_tutor'] ?></option>
-                                <?php endforeach; ?>
-                            </select>
+                            <input type="hidden" id="tutor-id" name="id_tutor" value="<?= $id_tutor ?>">
+                            <input type="text" id="tutor-name" class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100" 
+                                   value="<?= htmlspecialchars($nama_tutor) ?>" readonly>
+                            <small class="text-gray-500 text-xs mt-1">Tutor otomatis sesuai dengan yang sedang login</small>
                         </div>
 
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Pelajaran *</label>
-                            <select id="pelajaran-select" name="id_pelajaran" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" required>
-                                <option value="">Pilih Pelajaran</option>
-                                <?php foreach ($pelajaran_list as $pelajaran): ?>
-                                    <option value="<?= $pelajaran['id_pelajaran'] ?>"><?= $pelajaran['pelajaran'] ?></option>
-                                <?php endforeach; ?>
-                            </select>
+                            <input type="hidden" id="pelajaran-id" name="id_pelajaran" value="<?= $id_pelajaran_tutor ?>">
+                            <input type="text" id="pelajaran-name" class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100" 
+                                   value="<?= htmlspecialchars($tutor_data['pelajaran']) ?>" readonly>
+                            <small class="text-gray-500 text-xs mt-1">Pelajaran yang Anda ajarkan</small>
                         </div>
                     </div>
 
@@ -321,7 +518,7 @@ $title_page = "NCEEC";
 
                     <div class="mb-6">
                         <label class="block text-sm font-medium text-gray-700 mb-2">Waktu Pembelajaran *</label>
-                        <input type="datetime-local" id="waktu-pembelajaran" step="1" name="waktu" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <input type="datetime-local" id="waktu-pembelajaran" step="1" name="waktu" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" required>
                     </div>
 
                     <div class="flex justify-end space-x-4">
@@ -355,16 +552,22 @@ $title_page = "NCEEC";
             </div>
         </div>
     </div>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.js"></script>
     <script src="../../../assets/js/sidebar.js"></script>
     <script>
         // Global variables
-        let materialsData = [];
-        let pelajaranData = <?= json_encode($pelajaran_list) ?>;
-        let tutorData = <?= json_encode($tutor_list) ?>;
+        let allMaterials = <?php echo json_encode($materials); ?>;
+        let filteredMaterials = [...allMaterials];
         let currentPage = 1;
-        let itemsPerPage = 10;
-        let filteredData = [];
+        const rowsPerPage = 5;
+        let pelajaranData = <?= json_encode($lessons) ?>;
+        let tutorData = <?= json_encode($tutor_list) ?>;
+        const selectedLessonId = <?= json_encode($selectedLesson) ?>;
+        const currentTutorId = <?= json_encode($id_tutor) ?>;
+        const currentTutorName = <?= json_encode($nama_tutor) ?>;
+        const tutorLessonId = <?= json_encode($id_pelajaran_tutor) ?>;
+        const tutorLessonName = <?= json_encode($tutor_data['pelajaran']) ?>;
 
         // Utility functions
         function formatDateTime(dateStr) {
@@ -379,11 +582,15 @@ $title_page = "NCEEC";
         }
 
         function getPelajaranName(id) {
-            const pelajaran = pelajaranData.find(p => p.id_pelajaran == id);
-            return pelajaran ? pelajaran.pelajaran : 'Unknown';
+            // Untuk tutor, hanya bisa mengajar satu pelajaran
+            return tutorLessonName || 'Unknown';
         }
 
         function getTutorName(id) {
+            // Untuk tutor yang sedang login
+            if (id == currentTutorId) {
+                return currentTutorName;
+            }
             const tutor = tutorData.find(t => t.id_tutor == id);
             return tutor ? tutor.nama_tutor : 'Unknown';
         }
@@ -438,242 +645,224 @@ $title_page = "NCEEC";
         }
 
         // Data loading functions
-        function renderMaterials() {
-            const tableBody = document.getElementById('materials-table-body');
-            const emptyState = document.getElementById('empty-state');
+        async function loadMaterialsForLesson() {
+            if (!selectedLessonId) return;
 
-            if (filteredData.length === 0) {
-                emptyState.classList.remove('hidden');
-                tableBody.innerHTML = '';
-                updatePagination();
-                return;
-            }
-
-            emptyState.classList.add('hidden');
-
-            const startIndex = (currentPage - 1) * itemsPerPage;
-            const endIndex = startIndex + itemsPerPage;
-            const pageData = filteredData.slice(startIndex, endIndex);
-
-            // Kosongkan tabel terlebih dahulu
-            tableBody.innerHTML = '';
-
-            // Tambahkan baris satu per satu dengan event listener yang benar
-            pageData.forEach((material, index) => {
-                const row = document.createElement('tr');
-                row.className = 'hover:bg-gray-50 transition-colors duration-150';
-                row.innerHTML = `
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                ${startIndex + index + 1}
-            </td>
-            <td class="px-6 py-4 text-sm text-gray-900">
-                <div class="max-w-xs">
-                    <div class="text-sm text-gray-500 truncate">${material.isi_materi.substring(0, 100)}${material.isi_materi.length > 100 ? '...' : ''}</div>
-                </div>
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                    ${getPelajaranName(material.id_pelajaran)}
-                </span>
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                ${getTutorName(material.id_tutor)}
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                ${formatDateTime(material.waktu)}
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                <button class="view-btn text-blue-600 hover:text-blue-900">
-                    <i class="fa-solid fa-eye"></i>
-                </button>
-                <button class="edit-btn text-indigo-600 hover:text-indigo-900">
-                    <i class="fa-solid fa-edit"></i>
-                </button>
-                <button class="delete-btn text-red-600 hover:text-red-900">
-                    <i class="fa-solid fa-trash"></i>
-                </button>
-            </td>
-        `;
-
-                // Tambahkan event listener untuk setiap tombol
-                row.querySelector('.view-btn').addEventListener('click', () => viewDetail(material.id_materi));
-                row.querySelector('.edit-btn').addEventListener('click', () => editMaterial(material.id_materi));
-                row.querySelector('.delete-btn').addEventListener('click', () => deleteMaterial(material.id_materi));
-
-                tableBody.appendChild(row);
-            });
-
-            updatePagination();
-        }
-
-        function applyFilters() {
-            const searchTerm = document.getElementById('search-input').value.toLowerCase();
-            const selectedPelajaran = document.getElementById('filter-pelajaran').value;
-
-            console.log('Applying filters:', {
-                searchTerm,
-                selectedPelajaran
-            });
-            console.log('Materials data before filter:', materialsData);
-
-            filteredData = materialsData.filter(material => {
-                const matchesSearch = material.isi_materi.toLowerCase().includes(searchTerm) ||
-                    getPelajaranName(material.id_pelajaran).toLowerCase().includes(searchTerm) ||
-                    getTutorName(material.id_tutor).toLowerCase().includes(searchTerm);
-
-                const matchesPelajaran = !selectedPelajaran ||
-                    material.id_pelajaran == selectedPelajaran;
-
-                return matchesSearch && matchesPelajaran;
-            });
-
-            console.log('Filtered data after filter:', filteredData);
-
-            currentPage = 1;
-            renderMaterials();
-        }
-
-        function updatePagination() {
-            const totalItems = filteredData.length;
-            const totalPages = Math.ceil(totalItems / itemsPerPage);
-
-            console.log('Updating pagination:', {
-                totalItems,
-                totalPages,
-                currentPage
-            });
-
-            document.getElementById('showing-from').textContent = totalItems === 0 ? 0 : ((currentPage - 1) * itemsPerPage) + 1;
-            document.getElementById('showing-to').textContent = Math.min(currentPage * itemsPerPage, totalItems);
-            document.getElementById('total-items').textContent = totalItems;
-            document.getElementById('total-materi-count').textContent = totalItems;
-
-            const prevBtn = document.getElementById('prev-page');
-            const nextBtn = document.getElementById('next-page');
-
-            prevBtn.disabled = currentPage === 1;
-            nextBtn.disabled = currentPage === totalPages || totalPages === 0;
-
-            // Generate page numbers
-            const pageNumbers = document.getElementById('page-numbers');
-            pageNumbers.innerHTML = '';
-
-            if (totalPages === 0) return;
-
-            const maxVisiblePages = 5;
-            let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
-            let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
-
-            if (endPage - startPage < maxVisiblePages - 1) {
-                startPage = Math.max(1, endPage - maxVisiblePages + 1);
-            }
-
-            for (let i = startPage; i <= endPage; i++) {
-                const pageBtn = document.createElement('button');
-                pageBtn.textContent = i;
-                pageBtn.className = `px-3 py-2 border rounded-lg ${
-            i === currentPage 
-                ? 'bg-blue-600 text-white border-blue-600' 
-                : 'border-gray-300 hover:bg-gray-50'
-        }`;
-                pageBtn.onclick = () => {
-                    currentPage = i;
-                    renderMaterials();
-                };
-                pageNumbers.appendChild(pageBtn);
-            }
-        }
-
-        // Enhanced loadMaterials function
-        async function loadMaterials() {
-            const tableBody = document.getElementById('materials-table-body');
             const loadingState = document.getElementById('loading-state');
             const emptyState = document.getElementById('empty-state');
+            const tableBody = document.getElementById('tableBody');
 
             // Show loading
             loadingState.classList.remove('hidden');
             emptyState.classList.add('hidden');
             tableBody.innerHTML = '';
 
-            console.log('Loading materials...');
-
             try {
-                const result = await sendAjaxRequest('get_all');
-
-                console.log('AJAX Result:', result);
+                const result = await sendAjaxRequest('get_materials_by_lesson', {
+                    lesson_id: selectedLessonId
+                });
 
                 if (result.status) {
-                    materialsData = result.materi || [];
-                    console.log('Materials data assigned:', materialsData);
-                    console.log('Materials count:', materialsData.length);
-
-                    // Make sure to call applyFilters after data is loaded
-                    applyFilters();
+                    allMaterials = result.materi || [];
+                    filteredMaterials = [...allMaterials];
+                    renderTable();
+                    updatePaginationInfo();
+                    document.getElementById('total-materi-count').textContent = allMaterials.length;
                 } else {
-                    console.error('Load materials failed:', result.message);
                     showNotification('Error loading data: ' + result.message, 'error');
-                    materialsData = [];
-                    filteredData = [];
-                    renderMaterials();
+                    allMaterials = [];
+                    filteredMaterials = [];
+                    renderTable();
                 }
             } catch (error) {
                 console.error('AJAX Error:', error);
                 showNotification('Error loading data: ' + error.message, 'error');
-                materialsData = [];
-                filteredData = [];
-                renderMaterials();
+                allMaterials = [];
+                filteredMaterials = [];
+                renderTable();
             }
 
             loadingState.classList.add('hidden');
         }
 
+        // Fungsi untuk memfilter data
+        function applyFilters() {
+            const judulMateri = document.getElementById('filterJudul').value.toLowerCase();
+            const tanggalUpload = document.getElementById('filterTanggal').value;
+
+            filteredMaterials = allMaterials.filter(material => {
+                const judulMatch = material.isi_materi?.toLowerCase().includes(judulMateri) || false;
+                const tanggalMatch = tanggalUpload ? material.waktu.includes(tanggalUpload) : true;
+
+                return judulMatch && tanggalMatch;
+            });
+
+            currentPage = 1;
+            renderTable();
+            updatePaginationInfo();
+        }
+
+        // Fungsi untuk mereset filter
+        function resetFilters() {
+            document.getElementById('filterJudul').value = '';
+            document.getElementById('filterTanggal').value = '';
+            filteredMaterials = [...allMaterials];
+            currentPage = 1;
+            renderTable();
+            updatePaginationInfo();
+        }
+
+        // Fungsi untuk merender tabel
+        function renderTable() {
+            const tableBody = document.getElementById('tableBody');
+            const emptyState = document.getElementById('empty-state');
+            const startIndex = (currentPage - 1) * rowsPerPage;
+            const endIndex = startIndex + rowsPerPage;
+            const paginatedMaterials = filteredMaterials.slice(startIndex, endIndex);
+
+            if (filteredMaterials.length === 0) {
+                emptyState.classList.remove('hidden');
+                tableBody.innerHTML = '';
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+
+            tableBody.innerHTML = paginatedMaterials.map(material => `
+                <tr class="hover:bg-gray-50 transition duration-150">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">${material.id_materi || 'N/A'}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0 h-10 w-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-file-alt text-blue-600"></i>
+                            </div>
+                            <div class="ml-4">
+                                <div class="text-sm font-medium text-gray-900">${(material.isi_materi || 'N/A').substring(0, 50)}${(material.isi_materi || '').length > 50 ? '...' : ''}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        ${getTutorName(material.id_tutor)}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                        ${formatDateTime(material.waktu) || 'N/A'}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
+                        <div class="flex justify-center space-x-3">
+                            <button onclick="viewMaterial(${material.id_materi})" class="text-blue-600 hover:text-blue-900 transition duration-150" title="Lihat">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button onclick="editMaterial(${material.id_materi})" class="text-yellow-600 hover:text-yellow-900 transition duration-150" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button onclick="deleteMaterial(${material.id_materi})" class="text-red-600 hover:text-red-900 transition duration-150" title="Hapus">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // Fungsi untuk update info pagination
+        function updatePaginationInfo() {
+            const totalPages = Math.ceil(filteredMaterials.length / rowsPerPage);
+            const startItem = filteredMaterials.length === 0 ? 0 : (currentPage - 1) * rowsPerPage + 1;
+            const endItem = Math.min(currentPage * rowsPerPage, filteredMaterials.length);
+
+            document.querySelector('.pagination-info').textContent =
+                `Menampilkan ${startItem}-${endItem} dari ${filteredMaterials.length} hasil`;
+
+            // Update tombol navigasi
+            const prevPage = document.querySelector('.prev-page');
+            const prevPageMobile = document.querySelector('.prev-page-mobile');
+            const nextPage = document.querySelector('.next-page');
+            const nextPageMobile = document.querySelector('.next-page-mobile');
+
+            if (prevPage) prevPage.disabled = currentPage === 1;
+            if (prevPageMobile) prevPageMobile.disabled = currentPage === 1;
+            if (nextPage) nextPage.disabled = currentPage === totalPages || totalPages === 0;
+            if (nextPageMobile) nextPageMobile.disabled = currentPage === totalPages || totalPages === 0;
+
+            // Update tombol halaman
+            const pageButtonsContainer = document.querySelector('.page-buttons');
+            if (pageButtonsContainer) {
+                pageButtonsContainer.innerHTML = '';
+
+                for (let i = 1; i <= totalPages; i++) {
+                    const button = document.createElement('button');
+                    button.className = `relative inline-flex items-center px-4 py-2 border ${
+                        currentPage === i 
+                            ? 'bg-blue-50 border-blue-500 text-blue-600' 
+                            : 'border-gray-300 bg-white text-gray-500 hover:bg-gray-50'
+                    } text-sm font-medium`;
+                    button.textContent = i;
+                    button.addEventListener('click', () => changePage(i));
+                    pageButtonsContainer.appendChild(button);
+                }
+            }
+        }
+
+        // Fungsi untuk navigasi halaman
+        function changePage(newPage) {
+            currentPage = newPage;
+            renderTable();
+            updatePaginationInfo();
+        }
+
+        // Modal functions
         function openAddModal() {
             document.getElementById('modal-title').textContent = 'Tambah Materi Baru';
             document.getElementById('material-id').value = '';
             document.getElementById('form-action').value = 'add';
             document.getElementById('material-form').reset();
+            
+            // Set tutor dan pelajaran yang tidak bisa diubah
+            document.getElementById('tutor-id').value = currentTutorId;
+            document.getElementById('tutor-name').value = currentTutorName;
+            document.getElementById('pelajaran-id').value = tutorLessonId;
+            document.getElementById('pelajaran-name').value = tutorLessonName;
+            
             document.getElementById('material-modal').classList.remove('hidden');
         }
 
-        async function viewDetail(id) {
-            console.log('View detail:', id);
+        async function viewMaterial(id) {
             const result = await sendAjaxRequest('get_by_id', {
                 id_materi: id
             });
 
             if (result.status) {
                 const material = result.materi;
-                // Isi modal detail
                 document.getElementById('detail-content').innerHTML = `
-            <div class="space-y-6">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <h4 class="font-semibold text-gray-700 mb-2">Informasi Dasar</h4>
-                        <div class="space-y-3">
+                    <div class="space-y-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
-                                <span class="text-sm text-gray-500">Pelajaran:</span>
-                                <p class="font-medium">${getPelajaranName(material.id_pelajaran)}</p>
+                                <h4 class="font-semibold text-gray-700 mb-2">Informasi Dasar</h4>
+                                <div class="space-y-3">
+                                    <div>
+                                        <span class="text-sm text-gray-500">Pelajaran:</span>
+                                        <p class="font-medium">${getPelajaranName(material.id_pelajaran)}</p>
+                                    </div>
+                                    <div>
+                                        <span class="text-sm text-gray-500">Tutor:</span>
+                                        <p class="font-medium">${getTutorName(material.id_tutor)}</p>
+                                    </div>
+                                    <div>
+                                        <span class="text-sm text-gray-500">Waktu:</span>
+                                        <p class="font-medium">${formatDateTime(material.waktu)}</p>
+                                    </div>
+                                </div>
                             </div>
-                            <div>
-                                <span class="text-sm text-gray-500">Tutor:</span>
-                                <p class="font-medium">${getTutorName(material.id_tutor)}</p>
-                            </div>
-                            <div>
-                                <span class="text-sm text-gray-500">Waktu:</span>
-                                <p class="font-medium">${formatDateTime(material.waktu)}</p>
+                        </div>
+                        
+                        <div>
+                            <h4 class="font-semibold text-gray-700 mb-3">Isi Materi</h4>
+                            <div class="bg-gray-50 rounded-lg p-4">
+                                <p class="text-gray-700 leading-relaxed">${material.isi_materi}</p>
                             </div>
                         </div>
                     </div>
-                </div>
-                
-                <div>
-                    <h4 class="font-semibold text-gray-700 mb-3">Isi Materi</h4>
-                    <div class="bg-gray-50 rounded-lg p-4">
-                        <p class="text-gray-700 leading-relaxed">${material.isi_materi}</p>
-                    </div>
-                </div>
-            </div>
-        `;
+                `;
                 document.getElementById('detail-modal').classList.remove('hidden');
             } else {
                 showNotification('Error: ' + result.message, 'error');
@@ -681,7 +870,6 @@ $title_page = "NCEEC";
         }
 
         async function editMaterial(id) {
-            console.log('Edit material:', id);
             const result = await sendAjaxRequest('get_by_id', {
                 id_materi: id
             });
@@ -691,8 +879,13 @@ $title_page = "NCEEC";
                 document.getElementById('modal-title').textContent = 'Edit Materi';
                 document.getElementById('material-id').value = material.id_materi;
                 document.getElementById('form-action').value = 'update';
-                document.getElementById('tutor-select').value = material.id_tutor;
-                document.getElementById('pelajaran-select').value = material.id_pelajaran;
+                
+                // Set tutor dan pelajaran yang tidak bisa diubah
+                document.getElementById('tutor-id').value = currentTutorId;
+                document.getElementById('tutor-name').value = currentTutorName;
+                document.getElementById('pelajaran-id').value = tutorLessonId;
+                document.getElementById('pelajaran-name').value = tutorLessonName;
+                
                 document.getElementById('materi-content').value = material.isi_materi;
                 document.getElementById('waktu-pembelajaran').value = material.waktu;
                 document.getElementById('material-modal').classList.remove('hidden');
@@ -702,19 +895,38 @@ $title_page = "NCEEC";
         }
 
         async function deleteMaterial(id) {
-            console.log('Delete material:', id);
-            if (confirm('Apakah Anda yakin ingin menghapus materi ini?')) {
+            const modal = document.createElement('div');
+            modal.id = 'delete-material-modal';
+            modal.innerHTML = `
+                <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div class="bg-white rounded-lg p-6 w-96">
+                        <h2 class="text-lg font-semibold mb-4">Konfirmasi Hapus Materi</h2>
+                        <p class="text-sm mb-6">Apakah Anda yakin ingin menghapus materi ini?</p>
+                        <div class="flex justify-end space-x-4">
+                            <button id="close-modal" class="px-4 py-2 bg-gray-300 rounded">Batal</button>
+                            <button id="confirm-delete" class="px-4 py-2 bg-red-500 text-white rounded">Hapus</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+
+            document.getElementById('close-modal').addEventListener('click', () => {
+                modal.remove();
+            });
+
+            document.getElementById('confirm-delete').addEventListener('click', async () => {
                 const result = await sendAjaxRequest('delete', {
                     id_materi: id
                 });
-
                 if (result.status) {
                     showNotification('Materi berhasil dihapus', 'success');
-                    await loadMaterials();
+                    await loadMaterialsForLesson();
                 } else {
                     showNotification('Error: ' + result.message, 'error');
                 }
-            }
+                modal.remove();
+            });
         }
 
         function closeModal() {
@@ -725,37 +937,48 @@ $title_page = "NCEEC";
             document.getElementById('detail-modal').classList.add('hidden');
         }
 
-        function refreshData() {
-            loadMaterials();
-            showNotification('Data diperbarui', 'success');
-        }
-
         // Event listeners
-        document.getElementById('search-input').addEventListener('input', applyFilters);
-        document.getElementById('filter-pelajaran').addEventListener('change', applyFilters);
+        document.addEventListener('DOMContentLoaded', () => {
+            if (selectedLessonId) {
+                renderTable();
+                updatePaginationInfo();
 
-        document.getElementById('prev-page').addEventListener('click', () => {
-            if (currentPage > 1) {
-                currentPage--;
-                renderMaterials();
+                // Event listeners for filter inputs
+                document.getElementById('filterJudul').addEventListener('input', applyFilters);
+                document.getElementById('filterTanggal').addEventListener('change', applyFilters);
+
+                // Pagination controls
+                const prevPage = document.querySelector('.prev-page');
+                const nextPage = document.querySelector('.next-page');
+                const prevPageMobile = document.querySelector('.prev-page-mobile');
+                const nextPageMobile = document.querySelector('.next-page-mobile');
+
+                if (prevPage) prevPage.addEventListener('click', () => {
+                    if (currentPage > 1) changePage(currentPage - 1);
+                });
+
+                if (nextPage) nextPage.addEventListener('click', () => {
+                    if (currentPage < Math.ceil(filteredMaterials.length / rowsPerPage)) changePage(currentPage + 1);
+                });
+
+                if (prevPageMobile) prevPageMobile.addEventListener('click', () => {
+                    if (currentPage > 1) changePage(currentPage - 1);
+                });
+
+                if (nextPageMobile) nextPageMobile.addEventListener('click', () => {
+                    if (currentPage < Math.ceil(filteredMaterials.length / rowsPerPage)) changePage(currentPage + 1);
+                });
             }
         });
 
-        document.getElementById('next-page').addEventListener('click', () => {
-            const totalPages = Math.ceil(filteredData.length / itemsPerPage);
-            if (currentPage < totalPages) {
-                currentPage++;
-                renderMaterials();
-            }
-        });
-
+        // Form submission
         document.getElementById('material-form').addEventListener('submit', async function(e) {
             e.preventDefault();
 
             const formData = {
                 id_materi: document.getElementById('material-id').value,
-                id_tutor: document.getElementById('tutor-select').value,
-                id_pelajaran: document.getElementById('pelajaran-select').value,
+                id_tutor: currentTutorId,
+                id_pelajaran: tutorLessonId,
                 isi_materi: document.getElementById('materi-content').value,
                 waktu: document.getElementById('waktu-pembelajaran').value,
                 action: document.getElementById('form-action').value
@@ -777,7 +1000,7 @@ $title_page = "NCEEC";
                         'success'
                     );
                     closeModal();
-                    await loadMaterials();
+                    await loadMaterialsForLesson();
                 } else {
                     showNotification('Error: ' + result.message, 'error');
                 }
@@ -787,48 +1010,56 @@ $title_page = "NCEEC";
             }
         });
 
-        document.addEventListener('click', function(event) {
-            const sidebar = document.getElementById('sidebar');
-            const hamburger = event.target.closest('button[onclick="toggleSidebar()"]');
-
-            if (!sidebar.contains(event.target) && !hamburger && window.innerWidth < 1024) {
-                if (!sidebar.classList.contains('-translate-x-full')) {
-                    toggleSidebar();
-                }
-            }
-        });
-
-        window.addEventListener('resize', function() {
+        // Sidebar functionality
+        function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('overlay');
 
-            if (window.innerWidth >= 1024) {
-                sidebar.classList.remove('-translate-x-full');
-                overlay.classList.add('hidden');
-            } else {
-                sidebar.classList.add('-translate-x-full');
-                overlay.classList.add('hidden');
+            sidebar.classList.toggle('-translate-x-full');
+            overlay.classList.toggle('hidden');
+        }
+
+        function setActivePage(pageName) {
+            document.getElementById('page-title').textContent = pageName;
+
+            // Update active menu item
+            document.querySelectorAll('.menu-item').forEach(item => {
+                item.classList.remove('active');
+            });
+
+            if (pageName === 'List Materi') {
+                document.getElementById('menu-materi').classList.add('active');
+            } else if (pageName === 'Dashboard') {
+                document.getElementById('menu-dashboard').classList.add('active');
             }
-        });
+        }
 
-        const userMenuButton = document.getElementById('user-menu-button');
-        const userMenu = document.getElementById('user-menu');
-        const userMenuIcon = document.getElementById('user-menu-icon');
+        function logout() {
+            const modal = document.createElement('div');
+            modal.id = 'logout-modal';
+            modal.innerHTML = `
+                <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div class="bg-white rounded-lg p-6 w-96">
+                        <h2 class="text-lg font-semibold mb-4">Konfirmasi Logout</h2>
+                        <p class="text-sm mb-6">Apakah Anda yakin ingin logout?</p>
+                        <div class="flex justify-end space-x-4">
+                            <button id="close-modal" class="px-4 py-2 bg-gray-300 rounded">Batal</button>
+                            <button id="confirm-logout" class="px-4 py-2 bg-red-500 text-white rounded">Logout</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
 
-        userMenuButton.addEventListener('click', () => {
-            const currentRotation = userMenu.classList.contains('hidden') ? 180 : 0;
-            userMenuIcon.style.transform = `rotate(${currentRotation}deg)`;
-            userMenuIcon.style.transition = 'transform 0.3s ease';
-            userMenu.classList.toggle('hidden');
-        });
+            document.getElementById('close-modal').addEventListener('click', () => {
+                modal.remove();
+            });
 
-        document.addEventListener('click', (event) => {
-            if (!userMenuButton.contains(event.target) && !userMenu.contains(event.target)) {
-                userMenuIcon.style.transform = 'rotate(0deg)';
-                userMenu.classList.add('hidden');
-            }
-        });
-       
+            document.getElementById('confirm-logout').addEventListener('click', () => {
+                window.location.href = '../../auth/logout.php';
+            });
+        }
+
         // Close modals when clicking outside
         document.getElementById('material-modal').addEventListener('click', function(e) {
             if (e.target === this) {
@@ -849,36 +1080,6 @@ $title_page = "NCEEC";
                 closeDetailModal();
             }
         });
-
-        // Initialize page
-        document.addEventListener('DOMContentLoaded', function() {
-            loadMaterials();
-
-            document.getElementById('materials-table-body').addEventListener('click', function(e) {
-                const btn = e.target.closest('button[data-action]');
-                if (!btn) return;
-
-                const action = btn.getAttribute('data-action');
-                const id = btn.getAttribute('data-id');
-
-                switch (action) {
-                    case 'view':
-                        viewDetail(id);
-                        break;
-                    case 'edit':
-                        editMaterial(id);
-                        break;
-                    case 'delete':
-                        deleteMaterial(id);
-                        break;
-                }
-            });
-        });
-
-        // Auto-refresh data every 30 seconds
-        setInterval(() => {
-            loadMaterials();
-        }, 30000);
     </script>
 </body>
 
