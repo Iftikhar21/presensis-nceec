@@ -22,7 +22,7 @@ if (!isset($_SESSION['username']) || !isset($_SESSION['ID'])) {
 
 $id_user = $_SESSION['ID'];
 
-// Validasi teacher data
+// Validasi teacher data - menggunakan nama fungsi yang benar dari CRUD
 $data_teacher = getTeacherWhereId($id_user);
 if (!$data_teacher['status']) {
     echo "<p>Error: " . htmlspecialchars($data_teacher['message']) . "</p>";
@@ -201,12 +201,47 @@ $title_page = "NCEEC";
                         </div>
                     <?php endif; ?>
 
-                    <form action="<?= $actionURL ?>" method="POST" enctype="multipart/form-data" class="space-y-4" id="tutorForm">
+                    <form action="<?= $actionURL ?>" method="POST" enctype="multipart/form-data" class="space-y-4" id="tutorForm" onsubmit="return validateForm()") onsubmit="return validateForm()">
                         <!-- Hidden fields -->
                         <input type="hidden" name="user_id" value="<?= htmlspecialchars($id_user) ?>">
                         <?php if ($isEdit): ?>
                             <input type="hidden" name="id_tutor" value="<?= htmlspecialchars($id_tutor) ?>">
                         <?php endif; ?>
+
+                        <!-- Username -->
+                        <div>
+                            <label class="block text-sm font-medium mb-1" for="username">
+                                Username <span class="text-red-500">*</span>
+                            </label>
+                            <input 
+                                type="text" 
+                                id="username"
+                                name="username" 
+                                value="<?= $username ?>" 
+                                class="w-full border rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                                placeholder="Masukkan username"
+                                required
+                                minlength="3"
+                                maxlength="50">
+                            <p class="text-xs text-gray-500 mt-1">Minimal 3 karakter, maksimal 50 karakter</p>
+                        </div>
+
+                        <!-- Email -->
+                        <div>
+                            <label class="block text-sm font-medium mb-1" for="email">
+                                Email <span class="text-red-500">*</span>
+                            </label>
+                            <input 
+                                type="email" 
+                                id="email"
+                                name="email" 
+                                value="<?= $email ?>" 
+                                class="w-full border rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                                placeholder="Masukkan email"
+                                required
+                                maxlength="100">
+                            <p class="text-xs text-gray-500 mt-1">Masukkan email yang valid</p>
+                        </div>
 
                         <!-- Nama Tutor -->
                         <div>
@@ -308,8 +343,7 @@ $title_page = "NCEEC";
                             <button 
                                 type="submit" 
                                 id="submitBtn"
-                                class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition duration-200 flex items-center justify-center">
-                                <i class="fa-solid fa-spinner fa-spin mr-2 hidden" id="loadingIcon"></i>
+                                class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition duration-200 flex items-center justify-center">                               
                                 <?php if ($isEdit): ?>
                                     <i class="fa-solid fa-save mr-2" id="submitIcon"></i>
                                     <span id="submitText">Update Data</span>
@@ -374,6 +408,7 @@ $title_page = "NCEEC";
             submitBtn.disabled = true;
             loadingIcon.classList.remove('hidden');
             submitIcon.classList.add('hidden');
+            
             submitText.textContent = 'Memproses...';
         });
 
@@ -415,9 +450,21 @@ $title_page = "NCEEC";
 
         // Form validation
         function validateForm() {
+            const username = document.getElementById('username').value.trim();
+            const email = document.getElementById('email').value.trim();
             const nama = document.getElementById('nama_tutor').value.trim();
             const pelajaran = document.getElementById('id_pelajaran').value;
             const bergabung = document.getElementById('bergabung').value;
+            
+            if (username.length < 3) {
+                alert('Username minimal 3 karakter');
+                return false;
+            }
+            
+            if (!email || !isValidEmail(email)) {
+                alert('Silakan masukkan email yang valid');
+                return false;
+            }
             
             if (nama.length < 3) {
                 alert('Nama tutor minimal 3 karakter');
@@ -442,6 +489,12 @@ $title_page = "NCEEC";
             }
             
             return true;
+        }
+
+        // Email validation helper function
+        function isValidEmail(email) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return emailRegex.test(email);
         }
 
         // Sidebar and navigation functions
