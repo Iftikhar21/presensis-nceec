@@ -171,9 +171,8 @@ if (isset($_GET['action'])) {
                 </div>
 
                 <!-- Filter Section -->
-                <!-- Filter Section -->
-                <div class="p-6 mb-6 border border-gray-200 rounded-lg bg-gray-50">
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div class="p-4 sm:p-6 mb-6 border border-gray-200 rounded-lg bg-gray-50">
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                         <!-- Filter Nama -->
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Nama Tutor</label>
@@ -208,10 +207,10 @@ if (isset($_GET['action'])) {
 
                         <!-- Filter Status -->
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1 sm:mb-2">Status</label>
                             <select
                                 id="filterStatus"
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-150">
+                                class="w-full px-3 py-2 sm:px-4 sm:py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-150">
                                 <option value="">Semua Status</option>
                                 <option value="Hadir">Hadir</option>
                                 <option value="Terlambat">Terlambat</option>
@@ -223,39 +222,44 @@ if (isset($_GET['action'])) {
 
                         <!-- Filter Mood -->
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Mood</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1 sm:mb-2">Mood</label>
                             <select
                                 id="filterMood"
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-150">
+                                class="w-full px-3 py-2 sm:px-4 sm:py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-150">
                                 <option value="">Semua Mood</option>
                                 <option value="Happy">Baik</option>
                                 <option value="Normal">Biasa Aja</option>
                                 <option value="Bad">Buruk</option>
                             </select>
                         </div>
+                    </div>
 
-                        <!-- Action Buttons -->
-                        <div class="flex items-end space-x-3 md:col-span-2">
-                            <button
-                                onclick="resetFilters()"
-                                class="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-150 flex items-center justify-center">
-                                <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                                </svg>
-                                Reset
-                            </button>
-                            <button
-                                onclick="applyFilters()"
-                                class="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-150 flex items-center justify-center">
-                                <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                                </svg>
-                                Terapkan
-                            </button>
-                        </div>
+                    <!-- Action Buttons -->
+                    <div class="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        <button
+                            onclick="resetFilters()"
+                            class="col-span-1 px-3 py-2 sm:px-4 sm:py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-150 flex items-center justify-center">
+                            <svg class="h-4 w-4 mr-1 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                            </svg>
+                            Reset
+                        </button>
+                        <button
+                            onclick="applyFilters()"
+                            class="col-span-1 px-3 py-2 sm:px-4 sm:py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-150 flex items-center justify-center">
+                            <svg class="h-4 w-4 mr-1 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                            Terapkan
+                        </button>
+                        <button
+                            onclick="exportToExcel()"
+                            class="col-span-2 sm:col-span-1 px-3 py-2 sm:px-4 sm:py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 transition duration-150 flex items-center justify-center">
+                            <i class="fa-solid fa-file-excel mr-1 sm:mr-2"></i>
+                            Export Excel
+                        </button>
                     </div>
                 </div>
-
                 <!-- Table Container -->
                 <div class="border border-gray-200 rounded-lg overflow-hidden">
                     <!-- Table -->
@@ -333,6 +337,8 @@ if (isset($_GET['action'])) {
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://npmcdn.com/flatpickr/dist/l10n/id.js"></script>
     <script src="../../../assets/js/sidebar.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
 
     <script>
         // Data dan konfigurasi awal
@@ -822,6 +828,117 @@ if (isset($_GET['action'])) {
                 clearTimeout(timeout);
                 timeout = setTimeout(later, wait);
             };
+        }
+
+        function exportToExcel() {
+            // Validasi data
+            if (filteredTeachers.length === 0) {
+                showNotification('Tidak ada data untuk diexport', 'warning');
+                return;
+            }
+
+            // Siapkan data
+            const excelData = filteredTeachers.map(teacher => ({
+                'Nama Tutor': teacher.nama_tutor || 'N/A',
+                'Tanggal': teacher.tanggal ? formatExcelDate(teacher.tanggal) : 'N/A',
+                'Waktu': teacher.waktu || 'N/A',
+                'Status': teacher.status || 'N/A',
+                'Mood': teacher.mood || 'N/A',
+                'Keterangan': teacher.keterangan || '-'
+            }));
+
+            // Buat worksheet
+            const worksheet = XLSX.utils.json_to_sheet(excelData);
+
+            // Buat workbook
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Data Absen");
+
+            // Format kolom lebar
+            worksheet['!cols'] = [{
+                    width: 25
+                }, // Nama Tutor
+                {
+                    width: 15
+                }, // Tanggal
+                {
+                    width: 10
+                }, // Waktu
+                {
+                    width: 15
+                }, // Status
+                {
+                    width: 15
+                }, // Mood
+                {
+                    width: 30
+                } // Keterangan
+            ];
+
+            // Generate nama file
+            const today = new Date();
+            const dateStr = today.toISOString().split('T')[0];
+            const fileName = `Data_Absen_Tutor_${dateStr}.xlsx`;
+
+            // Export file
+            XLSX.writeFile(workbook, fileName);
+
+            showNotification('Data berhasil diexport ke Excel', 'success');
+        }
+
+        // Format tanggal untuk Excel
+        function formatExcelDate(dateString) {
+            if (!dateString) return 'N/A';
+
+            try {
+                const date = new Date(dateString);
+                if (isNaN(date.getTime())) return 'N/A';
+
+                // Format: DD/MM/YYYY
+                const day = date.getDate().toString().padStart(2, '0');
+                const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                const year = date.getFullYear();
+
+                return `${day}/${month}/${year}`;
+            } catch (error) {
+                console.error('Error formatting date:', error);
+                return 'N/A';
+            }
+        }
+
+        function exportToExcelXLSX() {
+            if (filteredTeachers.length === 0) {
+                showNotification('Tidak ada data untuk diexport', 'warning');
+                return;
+            }
+
+            // Prepare data for worksheet
+            const data = [
+                ['Nama Tutor', 'Tanggal', 'Waktu', 'Status', 'Mood', 'Keterangan']
+            ];
+
+            filteredTeachers.forEach(teacher => {
+                data.push([
+                    teacher.nama_tutor || 'N/A',
+                    teacher.tanggal ? formatDateForExport(teacher.tanggal) : 'N/A',
+                    teacher.waktu || 'N/A',
+                    teacher.status || 'N/A',
+                    teacher.mood || 'N/A',
+                    teacher.keterangan || '-'
+                ]);
+            });
+
+            // Create workbook
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet(data);
+            XLSX.utils.book_append_sheet(wb, ws, "Data Absen Tutor");
+
+            // Generate file and download
+            const today = new Date();
+            const dateString = today.toISOString().split('T')[0];
+            XLSX.writeFile(wb, `Data_Absen_Tutor_${dateString}.xlsx`);
+
+            showNotification('Data berhasil diexport ke Excel', 'success');
         }
 
         // Fungsi untuk logout

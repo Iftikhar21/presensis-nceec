@@ -201,8 +201,8 @@ if (isset($_POST['delete-lessons'])) {
                 <!-- Filter Section -->
                 <div class="p-6 mb-6 border border-gray-200 rounded-lg bg-gray-50">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <!-- Filter Nama (diperpendek) -->
-                        <div class="w-full"> <!-- Menambahkan fixed width -->
+                        <!-- Filter Nama -->
+                        <div class="w-full">
                             <label class="block text-sm font-medium text-gray-700 mb-2">Nama Pelajaran</label>
                             <div class="relative">
                                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -218,27 +218,29 @@ if (isset($_POST['delete-lessons'])) {
                             </div>
                         </div>
 
-                        <!-- Action Buttons -->
-                        <div class="flex items-end space-x-3">
-                            <button
-                                onclick="resetFilters()"
-                                class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-150 flex items-center justify-center">
-                                <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                                </svg>
-                                Reset
-                            </button>
-                            <button
-                                onclick="applyFilters()"
-                                class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-150 flex items-center justify-center">
-                                <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                                </svg>
-                                Terapkan
-                            </button>
+                        <!-- Action Buttons - Diubah untuk responsivitas -->
+                        <div class="flex flex-col sm:flex-row items-end space-y-3 sm:space-y-0 sm:space-x-3">
+                            <div class="flex space-x-3 w-full sm:w-auto">
+                                <button
+                                    onclick="resetFilters()"
+                                    class="w-full sm:w-auto px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-150 flex items-center justify-center">
+                                    <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                    </svg>
+                                    Reset
+                                </button>
+                                <button
+                                    onclick="applyFilters()"
+                                    class="w-full sm:w-auto px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-150 flex items-center justify-center">
+                                    <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                                    </svg>
+                                    Terapkan
+                                </button>
+                            </div>
                             <button
                                 onclick="addLessons()"
-                                class="w-48 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-150 flex items-center justify-center">
+                                class="w-full sm:w-48 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-150 flex items-center justify-center">
                                 <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                                 </svg>
@@ -451,7 +453,7 @@ if (isset($_POST['delete-lessons'])) {
     </div>
 
     <!-- Success Notification -->
-    <div id="successNotification" class="fixed bottom-4 right-4 z-50 hidden">
+    <div id="successNotification" class="fixed top-4 right-4 z-50 hidden">
         <div class="bg-green-500 text-white px-6 py-4 rounded-lg shadow-lg flex items-center animate-fade-in-up">
             <i class="fas fa-check-circle text-xl mr-3"></i>
             <span id="successMessage"></span>
