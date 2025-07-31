@@ -895,37 +895,6 @@ $tutor_list = getAllTeachers();
             }
         });
 
-       
-        // Sidebar functionality
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('overlay');
-
-            sidebar.classList.toggle('-translate-x-full');
-            overlay.classList.toggle('hidden');
-        }
-
-        function setActivePage(pageName) {
-            document.getElementById('page-title').textContent = pageName;
-
-            // Update active menu item
-            document.querySelectorAll('.menu-item').forEach(item => {
-                item.classList.remove('active');
-            });
-
-            if (pageName === 'List Materi') {
-                document.getElementById('menu-materi').classList.add('active');
-            } else if (pageName === 'Dashboard') {
-                document.getElementById('menu-dashboard').classList.add('active');
-            }
-        }
-
-        function logout() {
-            if (confirm('Apakah Anda yakin ingin logout?')) {
-                window.location.href = '../../../pages/auth/logout.php';
-            }
-        }
-
         // Close modals when clicking outside
         document.getElementById('material-modal').addEventListener('click', function(e) {
             if (e.target === this) {
