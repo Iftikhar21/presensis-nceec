@@ -25,8 +25,164 @@ if (!$data_teacher['status'] || !isset($data_teacher['teacher']['username'])) {
 // Ambil data tutor dari tutor table berdasarkan user_id
 $tutor_data = getTutorByUserId($id_user);
 
-if (!$tutor_data) {
-    echo "<p>Error: Tutor profile not found. Please complete your tutor profile first.</p>";
+if (empty($tutor_data)) {
+    echo '<!DOCTYPE html>
+    <html lang="id">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <link rel="icon" href="../../../assets/img/nceec-logo.jpg" type="image/x-icon">
+        <title>Profil Tutor Diperlukan</title>
+        <style>
+            :root {
+                --error-color: #dc3545;
+                --error-bg: #f8d7da;
+                --text-color: #212529;
+                --text-light: #6c757d;
+                --border-radius: 0.375rem;
+                --box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.1);
+                --transition: all 0.3s ease;
+            }
+            
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+            
+            body {
+                font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+                line-height: 1.5;
+                color: var(--text-color);
+                background-color: #f8f9fa;
+                padding: 0;
+                margin: 0;
+                min-height: 100vh;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+            }
+            
+            .error-container {
+                width: 100%;
+                max-width: 500px;
+                margin: 2rem;
+                animation: fadeIn 0.5s ease-out;
+            }
+            
+            .error-card {
+                background: white;
+                border-radius: var(--border-radius);
+                box-shadow: var(--box-shadow);
+                overflow: hidden;
+                text-align: center;
+                border-top: 4px solid var(--error-color);
+            }
+            
+            .error-icon {
+                padding: 1.5rem 0 0;
+                font-size: 3.5rem;
+                color: var(--error-color);
+            }
+            
+            .error-content {
+                padding: 1.5rem;
+            }
+            
+            .error-title {
+                font-size: 1.5rem;
+                margin-bottom: 0.5rem;
+                color: var(--text-color);
+            }
+            
+            .error-message {
+                color: var(--text-light);
+                margin-bottom: 1.5rem;
+            }
+            
+            .error-actions {
+                display: flex;
+                gap: 0.75rem;
+                justify-content: center;
+                flex-wrap: wrap;
+                padding: 0 1.5rem 1.5rem;
+            }
+            
+            .btn {
+                display: inline-block;
+                padding: 0.5rem 1rem;
+                border-radius: var(--border-radius);
+                text-decoration: none;
+                font-weight: 500;
+                transition: var(--transition);
+                text-align: center;
+                min-width: 120px;
+            }
+            
+            .btn-primary {
+                background-color: var(--error-color);
+                color: white;
+                border: 1px solid var(--error-color);
+            }
+            
+            .btn-primary:hover {
+                background-color: #c82333;
+                border-color: #bd2130;
+            }
+            
+            .btn-secondary {
+                background-color: white;
+                color: var(--text-color);
+                border: 1px solid #dee2e6;
+            }
+            
+            .btn-secondary:hover {
+                background-color: #f8f9fa;
+            }
+            
+            @media (max-width: 576px) {
+                .error-container {
+                    margin: 1rem;
+                }
+                
+                .error-actions {
+                    flex-direction: column;
+                    gap: 0.5rem;
+                }
+                
+                .btn {
+                    width: 100%;
+                }
+            }
+            
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(-20px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="error-container">
+            <div class="error-card">
+                <div class="error-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    </svg>
+                </div>
+                <div class="error-content">
+                    <h1 class="error-title">Profil Tutor Belum Lengkap</h1>
+                    <p class="error-message">Anda harus melengkapi profil tutor terlebih dahulu sebelum dapat mengakses fitur ini.</p>
+                </div>
+                <div class="error-actions">
+                    <a href="../dashboard/dashboard.php" class="btn btn-secondary">Kembali ke Dashboard</a>
+                    <a href="../../auth/teacher/profile.php"class="btn btn-primary">Lengkapi Profil</a>
+                </div>
+            </div>
+        </div>
+    </body>
+    </html>';
     exit();
 }
 
