@@ -940,13 +940,6 @@ if (isset($_GET['action'])) {
 
             showNotification('Data berhasil diexport ke Excel', 'success');
         }
-
-        // Fungsi untuk logout
-        function logout() {
-            if (confirm('Apakah Anda yakin ingin logout?')) {
-                window.location.href = '../../auth/logout.php';
-            }
-        }
     </script>
 </body>
 

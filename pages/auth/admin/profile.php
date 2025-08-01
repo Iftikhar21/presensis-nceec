@@ -125,22 +125,22 @@
                         Dashboard
                     </a>
 
-                    <a href="../list-materi/material-list.php" onclick="setActivePage('List Materi')" class="menu-item flex items-center px-4 py-3 text-sm rounded-lg" id="menu-materi">
+                    <a href="../../admin/list-materi/material-list.php" onclick="setActivePage('List Materi')" class="menu-item flex items-center px-4 py-3 text-sm rounded-lg" id="menu-materi">
                         <i class="fa-solid fa-list-check text-lg mr-3"></i>
                         List Materi
                     </a>
 
-                    <a href="../list-pelajaran/lesson-list.php" onclick="setActivePage('List Pelajaran')" class="menu-item flex items-center px-4 py-3 text-sm rounded-lg" id="menu-pelajaran">
+                    <a href="../../admin/list-pelajaran/lesson-list.php" onclick="setActivePage('List Pelajaran')" class="menu-item flex items-center px-4 py-3 text-sm rounded-lg" id="menu-pelajaran">
                         <i class="fa-solid fa-book-open-reader text-lg mr-3"></i>
                         List Pelajaran
                     </a>
 
-                    <a href="../data-absent-tutor/absent-tutor.php" onclick="setActivePage('Data Absen Tutor')" class="menu-item flex items-center px-4 py-3 text-sm rounded-lg" id="menu-absen">
+                    <a href="../../admin/data-absent-tutor/absent-tutor.php" onclick="setActivePage('Data Absen Tutor')" class="menu-item flex items-center px-4 py-3 text-sm rounded-lg" id="menu-absen">
                         <i class="fa-solid fa-calendar text-lg mr-3"></i>
                         Data Absen Tutor
                     </a>
 
-                    <a href="../data-tutor/data-tutor.php" onclick="setActivePage('Data Tutor')" class="menu-item flex items-center px-4 py-3 text-sm rounded-lg" id="menu-tutor">
+                    <a href="../../admin/data-tutor/data-tutor.php" onclick="setActivePage('Data Tutor')" class="menu-item flex items-center px-4 py-3 text-sm rounded-lg" id="menu-tutor">
                         <i class="fa-solid fa-users text-lg mr-3"></i>
                         Data Tutor
                     </a>
