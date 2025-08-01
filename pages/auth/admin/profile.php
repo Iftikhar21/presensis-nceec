@@ -1,4 +1,4 @@
-    <?php
+<?php
     // Konfigurasi session yang aman
     ini_set('session.cookie_lifetime', 0);
     ini_set('session.cookie_httponly', 1);
