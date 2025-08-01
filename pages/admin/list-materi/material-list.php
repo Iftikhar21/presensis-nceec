@@ -100,7 +100,6 @@ $tutor_list = getAllTeachers();
     <link rel="stylesheet" href="../../../assets/css/dashboard.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  
 </head>
 
 <body class="bg-primary text-primary min-h-screen flex flex-col">
@@ -172,7 +171,7 @@ $tutor_list = getAllTeachers();
                             <i class="fa-solid fa-chevron-down" id="user-menu-icon"></i>
                         </button>
                         <div id="user-menu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg">
-                            <a href="../../auth/profile.php" class="block px-6 py-4 text-sm text-gray-700 hover:bg-gray-100">
+                            <a href="../../auth/admin/profile.php" class="block px-6 py-4 text-sm text-gray-700 hover:bg-gray-100">
                                 <i class="fa-solid fa-user mr-3 text-blue-700"></i>
                                 Profile
                             </a>
@@ -895,37 +894,6 @@ $tutor_list = getAllTeachers();
                 showNotification('Terjadi kesalahan saat memproses data', 'error');
             }
         });
-
-       
-        // Sidebar functionality
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('overlay');
-
-            sidebar.classList.toggle('-translate-x-full');
-            overlay.classList.toggle('hidden');
-        }
-
-        function setActivePage(pageName) {
-            document.getElementById('page-title').textContent = pageName;
-
-            // Update active menu item
-            document.querySelectorAll('.menu-item').forEach(item => {
-                item.classList.remove('active');
-            });
-
-            if (pageName === 'List Materi') {
-                document.getElementById('menu-materi').classList.add('active');
-            } else if (pageName === 'Dashboard') {
-                document.getElementById('menu-dashboard').classList.add('active');
-            }
-        }
-
-        function logout() {
-            if (confirm('Apakah Anda yakin ingin logout?')) {
-                window.location.href = '../../../pages/auth/logout.php';
-            }
-        }
 
         // Close modals when clicking outside
         document.getElementById('material-modal').addEventListener('click', function(e) {

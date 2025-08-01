@@ -162,7 +162,7 @@ if (isset($_POST['delete-lessons'])) {
                             <i class="fa-solid fa-chevron-down" id="user-menu-icon"></i>
                         </button>
                         <div id="user-menu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg">
-                            <a href="../../auth/profile.php" class="block px-6 py-4 text-sm text-gray-700 hover:bg-gray-100">
+                            <a href="../../auth/admin/profile.php" class="block px-6 py-4 text-sm text-gray-700 hover:bg-gray-100">
                                 <i class="fa-solid fa-user mr-3 text-blue-700"></i>
                                 Profile
                             </a>
@@ -453,7 +453,7 @@ if (isset($_POST['delete-lessons'])) {
     </div>
 
     <!-- Success Notification -->
-    <div id="successNotification" class="fixed top-4 right-4 z-50 hidden">
+    <div id="successNotification" class="fixed top=-4 right-4 z-50 hidden">
         <div class="bg-green-500 text-white px-6 py-4 rounded-lg shadow-lg flex items-center animate-fade-in-up">
             <i class="fas fa-check-circle text-xl mr-3"></i>
             <span id="successMessage"></span>

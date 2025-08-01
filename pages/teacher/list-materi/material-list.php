@@ -393,7 +393,7 @@ function getMaterialsByLessonAndTutor($lessonId, $tutorId) {
                             <i class="fa-solid fa-chevron-down" id="user-menu-icon"></i>
                         </button>
                         <div id="user-menu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg">
-                            <a href="../../auth/profile.php" class="block px-6 py-4 text-sm text-gray-700 hover:bg-gray-100">
+                            <a href="../../auth/teacher/profile.php" class="block px-6 py-4 text-sm text-gray-700 hover:bg-gray-100">
                                 <i class="fa-solid fa-user mr-3 text-blue-700"></i>
                                 Profile
                             </a>

@@ -54,39 +54,40 @@ function getTeacherWhereId($id)
 /**
  * Get tutor data by user ID
  */
-function getTutorByUserId($user_id) 
+function getTutorByUserId(int $user_id): ?array
 {
     $conn = connectDatabase();
     if (!$conn) {
+        error_log("Database connection failed");
         return null;
     }
-    
-    // Use prepared statement for security
-    $stmt = mysqli_prepare($conn, "SELECT t.*, p.pelajaran 
-                                  FROM tutor t 
-                                  LEFT JOIN pelajaran p ON t.id_pelajaran = p.id_pelajaran 
-                                  WHERE t.user_id = ?");
-    
+
+    $query = "SELECT t.*, p.pelajaran 
+              FROM tutor t 
+              LEFT JOIN pelajaran p ON t.id_pelajaran = p.id_pelajaran 
+              WHERE t.user_id = ?";
+
+    $stmt = mysqli_prepare($conn, $query);
     if (!$stmt) {
         mysqli_close($conn);
+        error_log("Prepare failed: " . mysqli_error($conn));
         return null;
     }
-    
+
     mysqli_stmt_bind_param($stmt, "i", $user_id);
-    mysqli_stmt_execute($stmt);
-    $result = mysqli_stmt_get_result($stmt);
-    
-    if (!$result) {
+    if (!mysqli_stmt_execute($stmt)) {
+        error_log("Execute failed: " . mysqli_stmt_error($stmt));
         mysqli_stmt_close($stmt);
         mysqli_close($conn);
         return null;
     }
-    
-    $tutor_data = mysqli_fetch_assoc($result);
+
+    $result = mysqli_stmt_get_result($stmt);
+    $tutor = mysqli_fetch_assoc($result);
     mysqli_stmt_close($stmt);
     mysqli_close($conn);
-    
-    return $tutor_data;
+
+    return $tutor ?: null;
 }
 
 /**
@@ -104,7 +105,7 @@ function getTutorById($id_tutor)
                                   LEFT JOIN pelajaran p ON t.id_pelajaran = p.id_pelajaran
                                   LEFT JOIN users u ON t.user_id = u.id
                                   WHERE t.id_tutor = ?");
-    
+
     if (!$stmt) {
         mysqli_close($conn);
         return ['status' => false, 'message' => 'Error preparing statement: ' . mysqli_error($conn)];
@@ -174,7 +175,7 @@ function createTeacher($user_id, $nama_tutor, $id_pelajaran, $bergabung, $foto_p
         mysqli_stmt_bind_param($check_stmt, "i", $user_id);
         mysqli_stmt_execute($check_stmt);
         $check_result = mysqli_stmt_get_result($check_stmt);
-        
+
         if (mysqli_num_rows($check_result) > 0) {
             mysqli_stmt_close($check_stmt);
             mysqli_close($conn);
@@ -189,7 +190,7 @@ function createTeacher($user_id, $nama_tutor, $id_pelajaran, $bergabung, $foto_p
         mysqli_stmt_bind_param($pelajaran_stmt, "i", $id_pelajaran);
         mysqli_stmt_execute($pelajaran_stmt);
         $pelajaran_result = mysqli_stmt_get_result($pelajaran_stmt);
-        
+
         if (mysqli_num_rows($pelajaran_result) == 0) {
             mysqli_stmt_close($pelajaran_stmt);
             mysqli_close($conn);
@@ -203,20 +204,20 @@ function createTeacher($user_id, $nama_tutor, $id_pelajaran, $bergabung, $foto_p
     // Use prepared statement
     $stmt = mysqli_prepare($conn, "INSERT INTO tutor (user_id, nama_tutor, id_pelajaran, bergabung, foto_profile, created_at) 
                                   VALUES (?, ?, ?, ?, ?, ?)");
-    
+
     if (!$stmt) {
         mysqli_close($conn);
         return ["status" => false, "message" => "Error preparing statement: " . mysqli_error($conn)];
     }
 
     mysqli_stmt_bind_param($stmt, "isssss", $user_id, $nama_tutor, $id_pelajaran, $bergabung, $foto_profile, $created_at);
-    
+
     if (mysqli_stmt_execute($stmt)) {
         $insert_id = mysqli_insert_id($conn);
         mysqli_stmt_close($stmt);
         mysqli_close($conn);
         return [
-            "status" => true, 
+            "status" => true,
             "message" => "Tutor profile created successfully",
             "id_tutor" => $insert_id
         ];
@@ -228,92 +229,126 @@ function createTeacher($user_id, $nama_tutor, $id_pelajaran, $bergabung, $foto_p
     }
 }
 
-/**
- * Update existing tutor profile
- */
-function updateTeacher($user_id, $nama_tutor, $id_pelajaran, $bergabung, $foto_profile = null)
+function updateUserProfile($user_id, $username, $email)
 {
     $conn = connectDatabase();
     if (!$conn) {
         return ["status" => false, "message" => "Database connection failed"];
     }
 
-    // Validate input
-    if (empty($user_id) || empty($nama_tutor) || empty($id_pelajaran) || empty($bergabung)) {
-        mysqli_close($conn);
-        return ["status" => false, "message" => "All required fields must be filled"];
-    }
+    $query = "UPDATE users SET 
+             username = ?, 
+             email = ?,
+             update_at = NOW() 
+             WHERE id = ?";
 
-    // Check if tutor exists
-    $check_stmt = mysqli_prepare($conn, "SELECT id_tutor, foto_profile FROM tutor WHERE user_id = ?");
-    if (!$check_stmt) {
-        mysqli_close($conn);
-        return ["status" => false, "message" => "Error preparing check statement"];
-    }
-
-    mysqli_stmt_bind_param($check_stmt, "i", $user_id);
-    mysqli_stmt_execute($check_stmt);
-    $check_result = mysqli_stmt_get_result($check_stmt);
-    
-    if (mysqli_num_rows($check_result) == 0) {
-        mysqli_stmt_close($check_stmt);
-        mysqli_close($conn);
-        return ["status" => false, "message" => "Tutor profile not found"];
-    }
-
-    $existing_data = mysqli_fetch_assoc($check_result);
-    mysqli_stmt_close($check_stmt);
-
-    // If no new photo provided, keep the existing one
-    if (empty($foto_profile)) {
-        $foto_profile = $existing_data['foto_profile'];
-    }
-
-    // Validate pelajaran exists
-    $pelajaran_stmt = mysqli_prepare($conn, "SELECT id_pelajaran FROM pelajaran WHERE id_pelajaran = ?");
-    if ($pelajaran_stmt) {
-        mysqli_stmt_bind_param($pelajaran_stmt, "i", $id_pelajaran);
-        mysqli_stmt_execute($pelajaran_stmt);
-        $pelajaran_result = mysqli_stmt_get_result($pelajaran_stmt);
-        
-        if (mysqli_num_rows($pelajaran_result) == 0) {
-            mysqli_stmt_close($pelajaran_stmt);
-            mysqli_close($conn);
-            return ["status" => false, "message" => "Selected subject does not exist"];
-        }
-        mysqli_stmt_close($pelajaran_stmt);
-    }
-
-    $updated_at = date('Y-m-d H:i:s');
-
-    // Use prepared statement for update
-    $stmt = mysqli_prepare($conn, "UPDATE tutor SET 
-                                    nama_tutor = ?, 
-                                    id_pelajaran = ?, 
-                                    bergabung = ?, 
-                                    foto_profile = ?, 
-                                    updated_at = ?
-                                  WHERE user_id = ?");
-
+    $stmt = mysqli_prepare($conn, $query);
     if (!$stmt) {
         mysqli_close($conn);
-        return ["status" => false, "message" => "Error preparing update statement: " . mysqli_error($conn)];
+        return ["status" => false, "message" => "Error preparing statement: " . mysqli_error($conn)];
     }
 
-    mysqli_stmt_bind_param($stmt, "sssssi", $nama_tutor, $id_pelajaran, $bergabung, $foto_profile, $updated_at, $user_id);
+    mysqli_stmt_bind_param($stmt, "ssi", $username, $email, $user_id);
 
     if (mysqli_stmt_execute($stmt)) {
         mysqli_stmt_close($stmt);
         mysqli_close($conn);
-        return [
-            "status" => true, 
-            "message" => "Tutor profile updated successfully"
-        ];
+        return ["status" => true, "message" => "User profile updated successfully"];
     } else {
         $error = mysqli_stmt_error($stmt);
         mysqli_stmt_close($stmt);
         mysqli_close($conn);
-        return ["status" => false, "message" => "Error updating tutor: " . $error];
+        return ["status" => false, "message" => "Error updating user profile: " . $error];
+    }
+}
+
+/**
+ * Update existing tutor profile
+ */
+function updateTeacher($id_tutor, $nama_tutor, $id_pelajaran, $bergabung, $foto_profile, $username, $email)
+{
+    $conn = connectDatabase();
+    if (!$conn) {
+        return ["status" => false, "message" => "Database connection failed"];
+    }
+
+    // Mulai transaksi
+    mysqli_autocommit($conn, false);
+    $success = true;
+    $message = "";
+
+    try {
+        // 1. Dapatkan user_id dari tabel tutor
+        $query = "SELECT user_id FROM tutor WHERE id_tutor = ?";
+        $stmt = mysqli_prepare($conn, $query);
+        if (!$stmt) {
+            throw new Exception("Error preparing statement: " . mysqli_error($conn));
+        }
+
+        mysqli_stmt_bind_param($stmt, "i", $id_tutor);
+        if (!mysqli_stmt_execute($stmt)) {
+            throw new Exception("Error executing query: " . mysqli_stmt_error($stmt));
+        }
+
+        $result = mysqli_stmt_get_result($stmt);
+        $row = mysqli_fetch_assoc($result);
+        mysqli_stmt_close($stmt);
+
+        if (!$row) {
+            throw new Exception("Tutor not found");
+        }
+
+        $user_id = $row['user_id'];
+
+        // 2. Update tabel tutor
+        $query = "UPDATE tutor SET 
+                 nama_tutor = ?, 
+                 id_pelajaran = ?, 
+                 bergabung = ?, 
+                 foto_profile = COALESCE(?, foto_profile),
+                 updated_at = NOW()
+                 WHERE id_tutor = ?";
+
+        $stmt = mysqli_prepare($conn, $query);
+        if (!$stmt) {
+            throw new Exception("Error preparing statement: " . mysqli_error($conn));
+        }
+
+        mysqli_stmt_bind_param($stmt, "sissi", $nama_tutor, $id_pelajaran, $bergabung, $foto_profile, $id_tutor);
+
+        if (!mysqli_stmt_execute($stmt)) {
+            throw new Exception("Failed to update tutor: " . mysqli_stmt_error($stmt));
+        }
+        mysqli_stmt_close($stmt);
+
+        // 3. Update tabel users
+        $query = "UPDATE users SET 
+                 username = ?, 
+                 email = ?,
+                 update_at = NOW() 
+                 WHERE id = ?";
+
+        $stmt = mysqli_prepare($conn, $query);
+        if (!$stmt) {
+            throw new Exception("Error preparing statement: " . mysqli_error($conn));
+        }
+
+        mysqli_stmt_bind_param($stmt, "ssi", $username, $email, $user_id);
+
+        if (!mysqli_stmt_execute($stmt)) {
+            throw new Exception("Failed to update user: " . mysqli_stmt_error($stmt));
+        }
+        mysqli_stmt_close($stmt);
+
+        // Commit transaksi jika semua berhasil
+        mysqli_commit($conn);
+        return ["status" => true, "message" => "Profile updated successfully"];
+    } catch (Exception $e) {
+        mysqli_rollback($conn);
+        error_log("Update error: " . $e->getMessage());
+        return ["status" => false, "message" => $e->getMessage()];
+    } finally {
+        mysqli_close($conn);
     }
 }
 
@@ -369,7 +404,7 @@ function deleteTeacher($id_tutor)
         mysqli_stmt_close($stmt);
         mysqli_close($conn);
         return [
-            "status" => true, 
+            "status" => true,
             "message" => "Tutor deleted successfully"
         ];
     } else {
@@ -392,41 +427,41 @@ function handleProfilePhotoUpload($file, $user_id, $upload_dir = '../../../uploa
     if (!isset($file) || $file['error'] !== UPLOAD_ERR_OK) {
         return ['status' => false, 'message' => 'No file uploaded or upload error', 'path' => null];
     }
-    
+
     // Validate file type
     $allowed_types = ['image/jpeg', 'image/jpg', 'image/png'];
     $file_type = $file['type'];
     $file_info = finfo_open(FILEINFO_MIME_TYPE);
     $detected_type = finfo_file($file_info, $file['tmp_name']);
     finfo_close($file_info);
-    
+
     if (!in_array($file_type, $allowed_types) || !in_array($detected_type, $allowed_types)) {
         return ['status' => false, 'message' => 'File type not allowed. Only JPG, JPEG, PNG allowed.', 'path' => null];
     }
-    
+
     // Validate file size (max 2MB)
     if ($file['size'] > 2 * 1024 * 1024) {
         return ['status' => false, 'message' => 'File size too large. Maximum 2MB allowed.', 'path' => null];
     }
-    
+
     // Create directory if it doesn't exist
     if (!is_dir($upload_dir)) {
         if (!mkdir($upload_dir, 0755, true)) {
             return ['status' => false, 'message' => 'Failed to create upload directory.', 'path' => null];
         }
     }
-    
+
     // Generate unique filename
     $file_extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
     $new_filename = 'profile_' . $user_id . '_' . time() . '.' . $file_extension;
     $target_path = $upload_dir . $new_filename;
-    
+
     // Move uploaded file
     if (move_uploaded_file($file['tmp_name'], $target_path)) {
         return [
-            'status' => true, 
+            'status' => true,
             'message' => 'File uploaded successfully',
-            'filename' => $new_filename, 
+            'filename' => $new_filename,
             'path' => $target_path
         ];
     } else {
@@ -437,7 +472,3 @@ function handleProfilePhotoUpload($file, $user_id, $upload_dir = '../../../uploa
 // =========================
 // ACTION HANDLER
 // =========================
-
-
-
-?>

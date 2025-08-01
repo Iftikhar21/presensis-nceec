@@ -14,6 +14,8 @@ include '../../../includes/crud/crud-material/crud-material.php';
 include '../../../includes/crud/crud-lessons/crud-lessons.php';
 include '../../../includes/crud/crud-presence/crud-presence.php';
 
+$actionURL = "profile.php"; // Current page name
+
 // Pengecekan session dan autoritas
 if (!isset($_SESSION['username']) || !isset($_SESSION['ID'])) {
     header("Location: ../../auth/form-login.php");
@@ -22,7 +24,7 @@ if (!isset($_SESSION['username']) || !isset($_SESSION['ID'])) {
 
 $id_user = $_SESSION['ID'];
 
-// Validasi teacher data - menggunakan nama fungsi yang benar dari CRUD
+// Validasi teacher data
 $data_teacher = getTeacherWhereId($id_user);
 if (!$data_teacher['status']) {
     echo "<p>Error: " . htmlspecialchars($data_teacher['message']) . "</p>";
@@ -38,36 +40,90 @@ $username = htmlspecialchars($data_teacher['teacher']['username']);
 $email = htmlspecialchars($data_teacher['teacher']['email']);
 $role = ucfirst(htmlspecialchars($data_teacher['teacher']['role']));
 
-// Get data dengan error handling yang lebih baik
-$all_materi = getAllMaterial();
-$materi_count = $all_materi['status'] ? count($all_materi['materi']) : 0;
+// Cek apakah user sudah memiliki profil tutor
+$tutor_data = getTutorByUserId($id_user);
+$isEdit = ($tutor_data !== null);
 
+// Inisialisasi variabel untuk form
+$id_tutor = $isEdit ? $tutor_data['id_tutor'] : '';
+$nama_tutor = $isEdit ? htmlspecialchars($tutor_data['nama_tutor']) : '';
+$id_pelajaran = $isEdit ? htmlspecialchars($tutor_data['id_pelajaran']) : '';
+$bergabung = $isEdit ? htmlspecialchars($tutor_data['bergabung']) : date('Y-m-d');
+$foto_profile = $isEdit ? htmlspecialchars($tutor_data['foto_profile']) : '';
+
+// Get data pelajaran untuk dropdown
 $lessons_data = getAllLessons();
 $lessons_count = is_array($lessons_data) ? count($lessons_data) : 0;
 
-// Cek apakah data tutor sudah ada menggunakan fungsi dari CRUD
-$existing_tutor = getTutorByUserId($id_user);
-$isEdit = ($existing_tutor !== null);
+// Handle form submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Ambil data dari form
+    $nama_tutor = $_POST['nama_tutor'] ?? '';
+    $id_pelajaran = $_POST['id_pelajaran'] ?? '';
+    $bergabung = $_POST['bergabung'] ?? '';
+    $username = $_POST['username'] ?? '';
+    $email = $_POST['email'] ?? '';
 
-// Tentukan URL action dan inisialisasi nilai
-if ($isEdit) {
-    $actionURL = '../../../includes/crud/crud-teacher/crud-teacher.php?action=update';
-    $id_tutor = $existing_tutor['id_tutor'];
-    $nama_tutor = htmlspecialchars($existing_tutor['nama_tutor']);
-    $id_pelajaran = $existing_tutor['id_pelajaran'];
-    $bergabung = $existing_tutor['bergabung'];
-    $foto_profile = $existing_tutor['foto_profile'];
-} else {
-    $actionURL = '../../../includes/crud/crud-teacher/crud-teacher.php?action=create';
-    $id_tutor = '';
-    $nama_tutor = '';
-    $id_pelajaran = '';
-    $bergabung = date('Y-m-d'); // Default tanggal hari ini
-    $foto_profile = '';
+    // Handle file upload
+    $foto_path = null;
+    if (isset($_FILES['foto_profile']) && $_FILES['foto_profile']['error'] === UPLOAD_ERR_OK) {
+        $upload_result = handleProfilePhotoUpload($_FILES['foto_profile'], $id_user);
+        if ($upload_result['status']) {
+            $foto_path = $upload_result['path'];
+        } else {
+            header("Location: $actionURL?status=error&message=" . urlencode($upload_result['message']));
+            exit();
+        }
+    }
+
+    if ($isEdit) {
+        // Update existing tutor profile
+        $result = updateTeacher(
+            $id_tutor,
+            $nama_tutor,
+            $id_pelajaran,
+            $bergabung,
+            $foto_path,
+            $username,
+            $email
+        );
+
+        if ($result['status']) {
+            header("Location: $actionURL?status=success&message=" . urlencode("Profile updated successfully"));
+        } else {
+            header("Location: $actionURL?status=error&message=" . urlencode($result['message']));
+        }
+    } else {
+        // Create new tutor profile
+        $result = createTeacher(
+            $id_user,
+            $nama_tutor,
+            $id_pelajaran,
+            $bergabung,
+            $foto_path
+        );
+
+        if ($result['status']) {
+            // Update username dan email di tabel users
+            $update_result = updateUserProfile($id_user, $username, $email);
+
+            if ($update_result['status']) {
+                header("Location: $actionURL?status=success&message=" . urlencode("Profile created successfully"));
+            } else {
+                header("Location: $actionURL?status=error&message=" . urlencode($update_result['message']));
+            }
+        } else {
+            header("Location: $actionURL?status=error&message=" . urlencode($result['message']));
+        }
+    }
+    exit();
 }
 
 $title_page = "NCEEC";
 ?>
+<!DOCTYPE html>
+<html lang="id">
+<!-- Bagian HTML tetap sama seperti sebelumnya -->
 <!DOCTYPE html>
 <html lang="id">
 
@@ -137,7 +193,7 @@ $title_page = "NCEEC";
                             <i class="fa-solid fa-chevron-down" id="user-menu-icon"></i>
                         </button>
                         <div id="user-menu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg">
-                            <a href="../../auth/teacher/profile.php" class="block px-6 py-4 text-sm text-gray-700 hover:bg-gray-100">
+                            <a href="profile.php" class="block px-6 py-4 text-sm text-gray-700 hover:bg-gray-100">
                                 <i class="fa-solid fa-user mr-3 text-blue-700"></i>
                                 Profile
                             </a>
@@ -155,75 +211,64 @@ $title_page = "NCEEC";
         <!-- Content Area -->
         <main class="p-6 flex-grow">
             <div class="max-w-2xl mx-auto">
-                <!-- Alert Status -->
+                <!-- Notifikasi Popup di Pojok Kanan -->
                 <?php if (isset($_GET['status'])): ?>
-                    <?php if ($_GET['status'] == 'success'): ?>
-                        <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
-                            <div class="flex items-center">
-                                <i class="fa-solid fa-check-circle mr-2"></i>
-                                <strong>Sukses!</strong> Data tutor berhasil <?= $isEdit ? 'diupdate' : 'ditambahkan' ?>.
+                    <div class="fixed top-4 right-4 z-50">
+                        <?php if ($_GET['status'] == 'success'): ?>
+                            <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4 shadow-lg transform transition-all duration-300 animate-slide-in">
+                                <div class="flex items-center">
+                                    <i class="fa-solid fa-check-circle mr-2"></i>
+                                    <strong>Sukses!</strong> <?= isset($_GET['message']) ? htmlspecialchars($_GET['message']) : 'Operasi berhasil.' ?>
+                                </div>
                             </div>
-                        </div>
-                    <?php elseif ($_GET['status'] == 'error'): ?>
-                        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-                            <div class="flex items-center">
-                                <i class="fa-solid fa-exclamation-circle mr-2"></i>
-                                <strong>Error!</strong> <?= isset($_GET['message']) ? htmlspecialchars($_GET['message']) : 'Terjadi kesalahan.' ?>
+                        <?php elseif ($_GET['status'] == 'error'): ?>
+                            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 shadow-lg transform transition-all duration-300 animate-slide-in">
+                                <div class="flex items-center">
+                                    <i class="fa-solid fa-exclamation-circle mr-2"></i>
+                                    <strong>Error!</strong> <?= isset($_GET['message']) ? htmlspecialchars($_GET['message']) : 'Terjadi kesalahan.' ?>
+                                </div>
                             </div>
-                        </div>
-                    <?php endif; ?>
+                        <?php endif; ?>
+                    </div>
                 <?php endif; ?>
 
                 <div class="content-card rounded-lg p-6 bg-white shadow-md mb-4">
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="text-xl md:text-2xl font-semibold">
-                            <?= $isEdit ? 'Edit Data Tutor' : 'Tambah Data Tutor' ?>
+                            <?= $isEdit ? 'Profil Tutor' : 'Buat Profil Tutor' ?>
                         </h3>
-                        <?php if ($isEdit): ?>
-                            <span class="bg-blue-100 text-blue-800 text-sm font-medium px-2.5 py-0.5 rounded">
-                                <i class="fa-solid fa-edit mr-1"></i>
-                                Mode Edit
-                            </span>
-                        <?php else: ?>
-                            <span class="bg-green-100 text-green-800 text-sm font-medium px-2.5 py-0.5 rounded">
-                                <i class="fa-solid fa-plus mr-1"></i>
-                                Mode Tambah
-                            </span>
-                        <?php endif; ?>
+                        <span class="<?= $isEdit ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800' ?> text-sm font-medium px-2.5 py-0.5 rounded">
+                            <i class="fa-solid <?= $isEdit ? 'fa-edit' : 'fa-plus' ?> mr-1"></i>
+                            <?= $isEdit ? 'Mode Edit' : 'Mode Buat' ?>
+                        </span>
                     </div>
 
-                    <?php if ($isEdit): ?>
-                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                            <p class="text-sm text-blue-700">
-                                <i class="fa-solid fa-info-circle mr-2"></i>
-                                Anda sedang mengedit data tutor yang sudah ada. Silakan ubah data yang diperlukan dan klik "Update" untuk menyimpan perubahan.
-                            </p>
-                        </div>
-                    <?php endif; ?>
+                    <div class="<?= $isEdit ? 'bg-blue-50 border-blue-200' : 'bg-green-50 border-green-200' ?> border rounded-lg p-4 mb-4">
+                        <p class="text-sm <?= $isEdit ? 'text-blue-700' : 'text-green-700' ?>">
+                            <i class="fa-solid fa-info-circle mr-2"></i>
+                            <?= $isEdit ?
+                                'Anda sedang mengedit data tutor. Silakan ubah data yang diperlukan dan klik "Update" untuk menyimpan perubahan.' :
+                                'Anda belum memiliki profil tutor. Silakan isi data berikut untuk membuat profil tutor.' ?>
+                        </p>
+                    </div>
 
-                    <form action="<?= $actionURL ?>" method="POST" enctype="multipart/form-data" class="space-y-4" id="tutorForm" onsubmit="return validateForm()") onsubmit="return validateForm()">
-                        <!-- Hidden fields -->
-                        <input type="hidden" name="user_id" value="<?= htmlspecialchars($id_user) ?>">
-                        <?php if ($isEdit): ?>
-                            <input type="hidden" name="id_tutor" value="<?= htmlspecialchars($id_tutor) ?>">
-                        <?php endif; ?>
+                    <form action="" method="POST" enctype="multipart/form-data" class="space-y-4" id="teacherForm">
+                        <input type="hidden" name="id_tutor" value="<?= htmlspecialchars($id_tutor) ?>">
 
                         <!-- Username -->
                         <div>
                             <label class="block text-sm font-medium mb-1" for="username">
                                 Username <span class="text-red-500">*</span>
                             </label>
-                            <input 
-                                type="text" 
+                            <input
+                                type="text"
                                 id="username"
-                                name="username" 
-                                value="<?= $username ?>" 
-                                class="w-full border rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
-                                placeholder="Masukkan username"
+                                name="username"
+                                value="<?= $username ?>"
+                                class="w-full border rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                 required
                                 minlength="3"
-                                maxlength="50">
-                            <p class="text-xs text-gray-500 mt-1">Minimal 3 karakter, maksimal 50 karakter</p>
+                                maxlength="100">
                         </div>
 
                         <!-- Email -->
@@ -231,16 +276,13 @@ $title_page = "NCEEC";
                             <label class="block text-sm font-medium mb-1" for="email">
                                 Email <span class="text-red-500">*</span>
                             </label>
-                            <input 
-                                type="email" 
+                            <input
+                                type="email"
                                 id="email"
-                                name="email" 
-                                value="<?= $email ?>" 
-                                class="w-full border rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
-                                placeholder="Masukkan email"
-                                required
-                                maxlength="100">
-                            <p class="text-xs text-gray-500 mt-1">Masukkan email yang valid</p>
+                                name="email"
+                                value="<?= $email ?>"
+                                class="w-full border rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                required>
                         </div>
 
                         <!-- Nama Tutor -->
@@ -248,17 +290,15 @@ $title_page = "NCEEC";
                             <label class="block text-sm font-medium mb-1" for="nama_tutor">
                                 Nama Tutor <span class="text-red-500">*</span>
                             </label>
-                            <input 
-                                type="text" 
+                            <input
+                                type="text"
                                 id="nama_tutor"
-                                name="nama_tutor" 
-                                value="<?= $nama_tutor ?>" 
-                                class="w-full border rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
-                                placeholder="Masukkan nama tutor"
+                                name="nama_tutor"
+                                value="<?= $nama_tutor ?>"
+                                class="w-full border rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                 required
                                 minlength="3"
                                 maxlength="100">
-                            <p class="text-xs text-gray-500 mt-1">Minimal 3 karakter, maksimal 100 karakter</p>
                         </div>
 
                         <!-- Dropdown Pelajaran -->
@@ -266,16 +306,16 @@ $title_page = "NCEEC";
                             <label class="block text-sm font-medium mb-1" for="id_pelajaran">
                                 Pelajaran <span class="text-red-500">*</span>
                             </label>
-                            <select 
+                            <select
                                 id="id_pelajaran"
-                                name="id_pelajaran" 
-                                class="w-full border rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                                name="id_pelajaran"
+                                class="w-full border rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                 required>
                                 <option value="">-- Pilih Pelajaran --</option>
                                 <?php if (is_array($lessons_data) && !empty($lessons_data)) : ?>
                                     <?php foreach ($lessons_data as $lesson) : ?>
-                                        <option value="<?= htmlspecialchars($lesson['id_pelajaran']) ?>" 
-                                                <?= ($lesson['id_pelajaran'] == $id_pelajaran ? 'selected' : '') ?>>
+                                        <option value="<?= htmlspecialchars($lesson['id_pelajaran']) ?>"
+                                            <?= ($lesson['id_pelajaran'] == $id_pelajaran ? 'selected' : '') ?>>
                                             <?= htmlspecialchars($lesson['pelajaran']) ?>
                                         </option>
                                     <?php endforeach; ?>
@@ -290,15 +330,14 @@ $title_page = "NCEEC";
                             <label class="block text-sm font-medium mb-1" for="bergabung">
                                 Tanggal Bergabung <span class="text-red-500">*</span>
                             </label>
-                            <input 
-                                type="date" 
+                            <input
+                                type="date"
                                 id="bergabung"
-                                name="bergabung" 
-                                value="<?= $bergabung ?>" 
-                                class="w-full border rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                                name="bergabung"
+                                value="<?= $bergabung ?>"
+                                class="w-full border rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                 max="<?= date('Y-m-d') ?>"
                                 required>
-                            <p class="text-xs text-gray-500 mt-1">Tanggal tidak boleh lebih dari hari ini</p>
                         </div>
 
                         <!-- Foto Profile -->
@@ -311,17 +350,17 @@ $title_page = "NCEEC";
                                     </span>
                                 <?php endif; ?>
                             </label>
-                            <input 
-                                type="file" 
+                            <input
+                                type="file"
                                 id="foto_profile"
-                                name="foto_profile" 
-                                accept="image/jpeg,image/jpg,image/png" 
+                                name="foto_profile"
+                                accept="image/jpeg,image/jpg,image/png"
                                 class="w-full border rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                             <p class="text-xs text-gray-500 mt-1">
                                 Format yang didukung: JPG, JPEG, PNG. Maksimal 2MB.
-                                <?= $isEdit ? ' Kosongkan jika tidak ingin mengubah foto.' : '' ?>
+                                Kosongkan jika tidak ingin mengubah foto.
                             </p>
-                            
+
                             <!-- Preview area -->
                             <div id="imagePreview" class="mt-2 hidden">
                                 <img id="previewImg" src="" alt="Preview" class="w-24 h-24 object-cover rounded-lg border">
@@ -332,29 +371,20 @@ $title_page = "NCEEC";
                         <?php if ($isEdit && $foto_profile): ?>
                             <div class="mt-2">
                                 <label class="block text-sm font-medium mb-1">Foto Saat Ini:</label>
-                                <img src="<?= htmlspecialchars($foto_profile) ?>" 
-                                     alt="Foto Profile" 
-                                     class="w-24 h-24 object-cover rounded-lg border">
+                                <img src="<?= htmlspecialchars($foto_profile) ?>"
+                                    alt="Foto Profile"
+                                    class="w-24 h-24 object-cover rounded-lg border">
                             </div>
                         <?php endif; ?>
 
-                        <!-- Submit buttons -->
-                        <div class="pt-4 flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
-                            <button 
-                                type="submit" 
-                                id="submitBtn"
-                                class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition duration-200 flex items-center justify-center">                               
-                                <?php if ($isEdit): ?>
-                                    <i class="fa-solid fa-save mr-2" id="submitIcon"></i>
-                                    <span id="submitText">Update Data</span>
-                                <?php else: ?>
-                                    <i class="fa-solid fa-plus mr-2" id="submitIcon"></i>
-                                    <span id="submitText">Simpan Data</span>
-                                <?php endif; ?>
+                        <!-- Tombol Submit dan Kembali dalam satu baris -->
+                        <div class="flex flex-row space-x-3 pt-4">
+                            <button type="submit" name="submit" class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition duration-200 flex items-center justify-center">
+                                <i class="fa-solid fa-save mr-2"></i>
+                                <?= $isEdit ? 'Update Data' : 'Buat Profil' ?>
                             </button>
-                            
-                            <a href="../../teacher/dashboard/dashboard.php" 
-                               class="bg-gray-500 text-white px-6 py-2 rounded-md hover:bg-gray-600 transition duration-200 flex items-center justify-center">
+
+                            <a href="../../teacher/dashboard/dashboard.php" class="bg-gray-500 text-white px-6 py-2 rounded-md hover:bg-gray-600 transition duration-200 flex items-center justify-center">
                                 <i class="fa-solid fa-arrow-left mr-2"></i>
                                 Kembali
                             </a>
@@ -362,7 +392,7 @@ $title_page = "NCEEC";
                     </form>
                 </div>
 
-                <!-- Additional info for edit mode -->
+                <!-- Additional info -->
                 <?php if ($isEdit): ?>
                     <div class="content-card rounded-lg p-6 bg-white shadow-md">
                         <h4 class="text-lg font-semibold mb-3">
@@ -393,204 +423,6 @@ $title_page = "NCEEC";
         </main>
     </div>
 
-    <script>
-        // Enhanced JavaScript functionality
-        let currentPage = 'Profile';
-
-        // Form validation and submission
-        document.getElementById('tutorForm').addEventListener('submit', function(e) {
-            const submitBtn = document.getElementById('submitBtn');
-            const loadingIcon = document.getElementById('loadingIcon');
-            const submitIcon = document.getElementById('submitIcon');
-            const submitText = document.getElementById('submitText');
-            
-            // Show loading state
-            submitBtn.disabled = true;
-            loadingIcon.classList.remove('hidden');
-            submitIcon.classList.add('hidden');
-            
-            submitText.textContent = 'Memproses...';
-        });
-
-        // File preview functionality
-        document.getElementById('foto_profile').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            const preview = document.getElementById('imagePreview');
-            const previewImg = document.getElementById('previewImg');
-            
-            if (file) {
-                // Validate file type
-                const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
-                if (!allowedTypes.includes(file.type)) {
-                    alert('Format file tidak didukung. Hanya JPG, JPEG, PNG yang diizinkan.');
-                    e.target.value = '';
-                    preview.classList.add('hidden');
-                    return;
-                }
-                
-                // Validate file size (2MB)
-                if (file.size > 2 * 1024 * 1024) {
-                    alert('Ukuran file terlalu besar. Maksimal 2MB.');
-                    e.target.value = '';
-                    preview.classList.add('hidden');
-                    return;
-                }
-                
-                // Show preview
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    previewImg.src = e.target.result;
-                    preview.classList.remove('hidden');
-                };
-                reader.readAsDataURL(file);
-            } else {
-                preview.classList.add('hidden');
-            }
-        });
-
-        // Form validation
-        function validateForm() {
-            const username = document.getElementById('username').value.trim();
-            const email = document.getElementById('email').value.trim();
-            const nama = document.getElementById('nama_tutor').value.trim();
-            const pelajaran = document.getElementById('id_pelajaran').value;
-            const bergabung = document.getElementById('bergabung').value;
-            
-            if (username.length < 3) {
-                alert('Username minimal 3 karakter');
-                return false;
-            }
-            
-            if (!email || !isValidEmail(email)) {
-                alert('Silakan masukkan email yang valid');
-                return false;
-            }
-            
-            if (nama.length < 3) {
-                alert('Nama tutor minimal 3 karakter');
-                return false;
-            }
-            
-            if (!pelajaran) {
-                alert('Silakan pilih pelajaran');
-                return false;
-            }
-            
-            if (!bergabung) {
-                alert('Silakan pilih tanggal bergabung');
-                return false;
-            }
-            
-            const today = new Date();
-            const selectedDate = new Date(bergabung);
-            if (selectedDate > today) {
-                alert('Tanggal bergabung tidak boleh lebih dari hari ini');
-                return false;
-            }
-            
-            return true;
-        }
-
-        // Email validation helper function
-        function isValidEmail(email) {
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            return emailRegex.test(email);
-        }
-
-        // Sidebar and navigation functions
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('overlay');
-
-            if (sidebar.classList.contains('-translate-x-full')) {
-                sidebar.classList.remove('-translate-x-full');
-                overlay.classList.remove('hidden');
-            } else {
-                sidebar.classList.add('-translate-x-full');
-                overlay.classList.add('hidden');
-            }
-        }
-
-        function setActivePage(pageName) {
-            currentPage = pageName;
-            document.getElementById('page-title').textContent = pageName;
-
-            const menuItems = document.querySelectorAll('.menu-item');
-            menuItems.forEach(item => item.classList.remove('active'));
-
-            const menuMap = {
-                'Dashboard': 'menu-dashboard',
-                'List Materi': 'menu-materi',
-                'Profile': 'menu-profile'
-            };
-
-            if (menuMap[pageName]) {
-                const menuElement = document.getElementById(menuMap[pageName]);
-                if (menuElement) menuElement.classList.add('active');
-            }
-
-            if (window.innerWidth < 1024) {
-                toggleSidebar();
-            }
-        }
-
-        function logout() {
-            if (confirm('Apakah Anda yakin ingin logout?')) {
-                window.location.href = '../../auth/logout.php';
-            }
-        }
-
-        // Initialize page
-        document.addEventListener('DOMContentLoaded', function() {
-            setActivePage('Profile');
-            
-            // Handle responsive sidebar
-            window.addEventListener('resize', function() {
-                const sidebar = document.getElementById('sidebar');
-                const overlay = document.getElementById('overlay');
-
-                if (window.innerWidth >= 1024) {
-                    sidebar.classList.remove('-translate-x-full');
-                    overlay.classList.add('hidden');
-                } else {
-                    sidebar.classList.add('-translate-x-full');
-                    overlay.classList.add('hidden');
-                }
-            });
-
-            // User menu toggle
-            const userMenuButton = document.getElementById('user-menu-button');
-            const userMenu = document.getElementById('user-menu');
-            const userMenuIcon = document.getElementById('user-menu-icon');
-
-            if (userMenuButton && userMenu && userMenuIcon) {
-                userMenuButton.addEventListener('click', () => {
-                    const isHidden = userMenu.classList.contains('hidden');
-                    userMenuIcon.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
-                    userMenuIcon.style.transition = 'transform 0.3s ease';
-                    userMenu.classList.toggle('hidden');
-                });
-
-                document.addEventListener('click', (event) => {
-                    if (!userMenuButton.contains(event.target) && !userMenu.contains(event.target)) {
-                        userMenuIcon.style.transform = 'rotate(0deg)';
-                        userMenu.classList.add('hidden');
-                    }
-                });
-            }
-        });
-
-        // Auto-hide alerts after 5 seconds
-        setTimeout(function() {
-            const alerts = document.querySelectorAll('.bg-green-100, .bg-red-100');
-            alerts.forEach(alert => {
-                alert.style.transition = 'opacity 0.5s ease';
-                alert.style.opacity = '0';
-                setTimeout(() => alert.remove(), 500);
-            });
-        }, 5000);
-    </script>
-
     <!-- Footer -->
     <footer class="bg-white shadow-md lg:ml-64 mt-auto bottom-0">
         <div class="max-w-7xl mx-auto py-4 px-6">
@@ -599,5 +431,13 @@ $title_page = "NCEEC";
             </div>
         </div>
     </footer>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindplus/elements@1" type="module"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://npmcdn.com/flatpickr/dist/l10n/id.js"></script>
+    <script src="../../../assets/js/sidebar.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </body>
+
 </html>
